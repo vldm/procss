@@ -1,0 +1,37 @@
+[package]
+name = "procss"
+version = "0.1.0"
+edition = "2021"
+authors = ["Andrew Stein <andrew@prospective.dev>"]
+description = "A simple CSS parsing and transformation framework."
+repository = "https://github.com/ProspectiveCo/procss"
+license = "Apache-2.0"
+keywords = ["compiler", "web", "css"]
+
+[lib]
+name = "procss"
+path = "src/lib.rs"
+bench = false
+
+[[bin]]
+name = "procss"
+path = "src/main.rs"
+bench = false
+
+[[bench]]
+name = "basic"
+harness = false
+
+[features]
+bench = []
+
+[dependencies]
+nom = "7.1.1"
+anyhow = "1.0.56"
+base64 = "0.13.1"
+criterion = { version = "0.3", features = ["html_reports"] }
+
+[profile.release]
+lto = true
+codegen-units = 1
+

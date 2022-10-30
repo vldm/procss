@@ -1,0 +1,39 @@
+// ┌───────────────────────────────────────────────────────────────────────────┐
+// │                                                                           │
+// │  ██████╗ ██████╗  ██████╗   Copyright (C) 2022, The Prospective Company   │
+// │  ██╔══██╗██╔══██╗██╔═══██╗                                                │
+// │  ██████╔╝██████╔╝██║   ██║  This file is part of the Procss library,      │
+// │  ██╔═══╝ ██╔══██╗██║   ██║  distributed under the terms of the            │
+// │  ██║     ██║  ██║╚██████╔╝  Apache License 2.0.  The full license can     │
+// │  ╚═╝     ╚═╝  ╚═╝ ╚═════╝   be found in the LICENSE file.                 │
+// │                                                                           │
+// └───────────────────────────────────────────────────────────────────────────┘
+
+#![feature(assert_matches)]
+
+#[cfg(test)]
+use std::assert_matches::assert_matches;
+
+use procss::transformers::apply_var;
+use procss::{parse, RenderCss};
+
+#[test]
+fn test_var() {
+    assert_matches!(
+        parse(
+            "
+            @evilred: #FF1111;
+
+            div.open {
+                color: @evilred;
+            }
+        "
+        )
+        .map(|mut x| {
+            apply_var(&mut x);
+            x.flatten_tree().as_css_string()
+        })
+        .as_deref(),
+        Ok("div.open{color:#FF1111;}")
+    )
+}

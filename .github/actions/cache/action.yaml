@@ -1,0 +1,58 @@
+#  ┌───────────────────────────────────────────────────────────────────────────┐
+#  │                                                                           │
+#  │  ██████╗ ██████╗  ██████╗   Copyright (C) 2022, The Prospective Company   │
+#  │  ██╔══██╗██╔══██╗██╔═══██╗                                                │
+#  │  ██████╔╝██████╔╝██║   ██║  This file is part of the Procss library,      │
+#  │  ██╔═══╝ ██╔══██╗██║   ██║  distributed under the terms of the            │
+#  │  ██║     ██║  ██║╚██████╔╝  Apache License 2.0.  The full license can     │
+#  │  ╚═╝     ╚═╝  ╚═╝ ╚═════╝   be found in the LICENSE file.                 │
+#  │                                                                           │
+#  └───────────────────────────────────────────────────────────────────────────┘
+
+name: "Restore Cache"
+description: "Cache project assets"
+
+inputs:
+    name:
+        description: "Unique cache task name"
+        required: true
+    os:
+        description: "Target OS"
+        required: true
+    rust:
+        description: "Rust version"
+        required: true
+
+runs:
+    using: "composite"
+    steps:
+        - name: Cache cargo global
+          id: cache-cargo-global
+          uses: actions/cache@v3
+          with:
+              path: ~/.cargo
+              key: cargo-global-${{ inputs.name }}-${{ inputs.os }}-${{ github.ref_name }}-${{ hashFiles('Cargo.lock') }}
+              restore-keys: |
+                  cargo-global-${{ inputs.name }}-${{ inputs.os }}-${{ github.ref_name }}-
+                  cargo-global-${{ inputs.name }}-${{ inputs.os }}-main
+                  cargo-global-${{ inputs.name }}-${{ inputs.os }}-
+
+        - name: Cache cargo target
+          id: cache-cargo-target
+          uses: actions/cache@v3
+          with:
+              path: target
+              key: cargo-target-${{ inputs.name }}-${{ inputs.os }}-${{ github.ref_name }}-${{ hashFiles('target/release/bundle/**/*') }}
+              restore-keys: |
+                  cargo-target-${{ inputs.name }}-${{ inputs.os }}-${{ github.ref_name }}-
+                  cargo-target-${{ inputs.name }}-${{ inputs.os }}-main
+                  cargo-target-${{ inputs.name }}-${{ inputs.os }}-
+
+        - name: Install Rust ${{ inputs.rust }}
+          uses: actions-rs/toolchain@v1
+          with:
+              toolchain: ${{ inputs.rust }}
+              target: wasm32-unknown-unknown
+              default: true
+              override: true
+              components: rustfmt, clippy, rust-src

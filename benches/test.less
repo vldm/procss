@@ -1,0 +1,514 @@
+// ┌───────────────────────────────────────────────────────────────────────────┐
+// │                                                                           │
+// │  ██████╗ ██████╗  ██████╗   Copyright (C) 2022, The Prospective Company   │
+// │  ██╔══██╗██╔══██╗██╔═══██╗                                                │
+// │  ██████╔╝██████╔╝██║   ██║  This file is part of the Procss library,      │
+// │  ██╔═══╝ ██╔══██╗██║   ██║  distributed under the terms of the            │
+// │  ██║     ██║  ██║╚██████╔╝  Apache License 2.0.  The full license can     │
+// │  ╚═╝     ╚═╝  ╚═╝ ╚═════╝   be found in the LICENSE file.                 │
+// │                                                                           │
+// └───────────────────────────────────────────────────────────────────────────┘
+
+@import "./aggregate-selector.less";
+
+:host {
+  .column-selector-column-title {
+    display: flex;
+    width: 100%;
+    flex-direction: row !important;
+    align-items: center;
+  }
+
+  #expression-columns .column-selector-column-title {
+    width: calc(100% - 24px);
+  }
+
+  .column_name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+    flex: 1 1 250px;
+    padding-left: 23px;
+    display: flex;
+    align-items: center;
+
+    &:only-child {
+      padding-right: 12px;
+    }
+  }
+
+  .column-selector--spacer {
+    width: 94px;
+    flex: 0 1 94px;
+  }
+
+  .show-aggregate .column-selector--spacer {
+    width: 0px;
+  }
+
+  .show-aggregate {
+    .column_name:only-child {
+      padding-right: 12px;
+    }
+  }
+
+  #sub-columns .column_name:only-child {
+    padding-right: 12px;
+  }
+
+  .column_name:before {
+    // font-family: var(--interface-monospace--font-family,
+    //         monospace);
+    // width: var(--column_type--width, auto);
+    // min-width: 18px;
+    font-size: 12px;
+    font-weight: 200;
+    height: 13px;
+    // padding: 0 5px 0 0;
+    position: absolute;
+  }
+
+  .integer:before,
+  .float:before {
+    content: url("./number_type.svg");
+    left: 5px;
+  }
+
+  .string:before {
+    content: url("./string_type.svg");
+    left: 5px;
+  }
+
+  .boolean:before {
+    content: var(
+      --boolean--column-type--content,
+      var(--column-type--content, "t/f")
+    );
+    color: var(
+      --boolean--column-type--color,
+      var(--column-type--color, #999999)
+    );
+  }
+
+  .date:before,
+  .datetime:before {
+    content: url("./date_type.svg");
+    // top: -2px;
+    left: 5px;
+  }
+
+  #side_panel {
+    // &> :not(:last-child) {
+    //     margin-bottom: 6px;
+    // }
+
+    .psp-icon {
+      &:hover {
+        cursor: pointer;
+      }
+    }
+
+    .psp-icon__add {
+      display: flex;
+      width: 20px;
+      min-width: 20px;
+      margin-top: -2px;
+      height: 0px;
+      font-family: var(
+        --column-add--font-family,
+        var(--button--font-family, inherit)
+      );
+
+      &:before {
+        font-feature-settings: "liga";
+        content: var(--column-add--content, "+");
+      }
+    }
+
+    .psp-title__columnName {
+      display: flex;
+      margin-left: 4px;
+      font-size: 12px;
+      font-weight: 300;
+      white-space: nowrap;
+    }
+
+    #add-expression {
+      border: var(--column-add--border, none);
+      min-height: 26px;
+      flex-direction: row;
+      .expr-icon:before {
+        content: "+";
+        font-size: 16px;
+        margin-left: 4px;
+      }
+
+      & > span {
+        opacity: 0;
+        transition: opacity 0.25s 0.5s;
+        align-self: center;
+      }
+
+      &:hover > span {
+        opacity: 1;
+        transition: opacity 0.15s;
+      }
+
+      &.expr_editor_open {
+        background: rgba(0, 0, 0, 0.05);
+      }
+    }
+
+    .side_panel-action:hover {
+      cursor: pointer;
+    }
+
+    .dragdrop-highlight {
+      .column_selector_draggable.dragover,
+      .column-selector-column:not(:last-child):not(:nth-last-child(2)):not(:nth-last-child(3))
+        .column_selector_draggable {
+        border-bottom-color: var(--active--color) !important;
+      }
+
+      .column-selector-column:not(:first-child):not([data-label]):not(:nth-last-child(2))
+        .column_selector_draggable.dragover {
+        border-top-color: rgb(0 0 0 / 5%) !important;
+      }
+    }
+
+    .column-selector-column {
+      display: flex;
+      flex-direction: row-reverse;
+      align-items: stretch;
+      font-size: 12px;
+      background-color: #fdfffd;
+      border: 1px solid #ababab;
+      border-radius: 2px;
+      margin-bottom: 4px;
+
+      &:last-child,
+      &:nth-last-child(2) {
+        .column_selector_draggable {
+          border-color: transparent;
+        }
+      }
+
+      // Expression column toolbar buttons
+      span.expression-edit-button,
+      span.expression-delete-button {
+        padding-top: 1px;
+        font-family: var(--button--font-family, inherit);
+        cursor: pointer;
+        opacity: 1;
+        color: #999;
+
+        &:hover {
+          opacity: 1;
+          color: var(--active--color, #000);
+        }
+      }
+
+      span.expression-delete-button {
+        // padding-right: 1.5px;
+        padding-left: 5px;
+        margin-right: 8px;
+
+        &:before {
+          content: var(--column-close--content, "close");
+        }
+      }
+
+      span.expression-edit-button {
+        // padding-left: 1.5px;
+        padding-right: 8px;
+
+        &:before {
+          content: url(expression.svg); //var(--column-menu--content, "menu");
+        }
+      }
+
+      .column_selector_draggable {
+        display: flex;
+        align-items: start;
+        cursor: move;
+        // border-style: solid;
+        border-width: 1px;
+        // border-color: var(--inactive--color, #c5c9d0);
+        border-left-color: transparent;
+        border-right-color: transparent;
+        border-top-color: transparent;
+        font-size: 12px;
+        flex-grow: 1;
+        color: inherit;
+        box-sizing: border-box;
+        // flex-direction: column;
+        flex-direction: row-reverse;
+        align-items: center;
+        justify-content: space-evenly;
+        position: relative;
+        min-height: 24px;
+
+        // Height needs to be a multiple of non-`.show-aggregate` height
+        // so adding/removing does not drift the column position
+        // y-offset.
+        &.show-aggregate {
+          min-height: 47px;
+        }
+
+        &.show-aggregate {
+          .column_name {
+            padding-left: 5px;
+          }
+        }
+      }
+    }
+
+    .is_column_active {
+      font-family: var(
+        --column-selector--font-family,
+        var(--button--font-family, inherit)
+      ) !important;
+      width: var(--column-selector--width, 24px);
+      min-width: var(--column-selector--width, 24px);
+      height: var(--is_visible--height, auto);
+      cursor: pointer;
+      font-size: var(--column-selector--font-size, 14px);
+    }
+
+    #active-columns.collapse {
+      .column-selector-column:nth-last-child(3) {
+        .column_selector_draggable {
+          border-color: transparent;
+        }
+      }
+    }
+
+    #active-columns:not(.collapse).dragdrop-highlight {
+      .column-selector-column:not(:last-child):not(:nth-last-child(2))
+        .column_selector_draggable {
+        border-bottom-color: var(--active--color) !important;
+      }
+    }
+
+    #active-columns,
+    #sub-columns {
+      flex: 0 1 auto;
+      overflow-x: hidden !important;
+      overflow-y: scroll;
+
+      &:-webkit-scrollbar-thumb {
+        // background-color: rgba(0, 0, 0, 0.1);
+        // border-radius: 4px;
+        border: 0 solid #6e6e6e;
+        border-right-width: 1px;
+      }
+
+      &:-webkit-scrollbar-thumb:hover {
+        background-color: rgba(0, 0, 0, 0.1);
+      }
+
+      &:-webkit-scrollbar,
+      &:-webkit-scrollbar-corner {
+        background-color: transparent;
+        width: 6px;
+      }
+    }
+
+    #sub-columns {
+      margin-top: 32px;
+    }
+
+    #sub-columns:before {
+      font-size: 9px;
+      // left: -1px;
+      padding: var(--column_type--padding, 0px 0px 0px 0px);
+      color: #042121;
+      position: absolute;
+      margin-top: -15px;
+      content: "All Columns";
+    }
+
+    #active-columns.collapse {
+      max-height: min(calc(100% - 95px), 60%);
+    }
+
+    #sub-columns {
+      flex: 0 10000000 auto;
+    }
+
+    #active-columns {
+      display: flex;
+
+      .is_column_active {
+        color: var(--active--color, #999);
+
+        &:before {
+          content: var(--active-column-selector--content, "\2611");
+          content: url("./active.svg");
+        }
+
+        &:hover:before {
+          content: var(--active-column-selector--content, "\2611");
+          content: url("./active-mouseover.svg");
+        }
+
+        &.required {
+          color: var(--inactive--color, #ccc);
+          opacity: 0;
+          cursor: initial;
+        }
+
+        &.inactive:before {
+          content: "";
+        }
+      }
+
+      .column-selector-column {
+        position: relative;
+
+        .column_selector_draggable {
+          width: calc(100% - 24px);
+        }
+
+        &:before {
+          font-size: 9px;
+          // margin-left: 22px;
+          left: -1px;
+          padding: var(--column_type--padding, 0px 0px 0px 0px);
+          color: #042121; //var(--inactive--color, #666);
+          position: absolute;
+          margin-top: -15px;
+          content: attr(data-label);
+        }
+
+        &[data-label] {
+          margin-top: 22px;
+        }
+      }
+    }
+
+    // "Empty" slotted columns in the active column list.
+    .dragover,
+    .empty-named {
+      pointer-events: none;
+      background-color: #ababab33;
+
+      & > * {
+        opacity: 0;
+      }
+    }
+
+    .empty-named {
+      border: 1px dashed var(--inactive--color, #ddd) !important;
+    }
+
+    .dragover {
+      border: 1px dashed var(--active--color, #666) !important;
+    }
+
+    .dragover {
+      border-style: solid !important;
+    }
+
+    .dragover {
+      box-shadow: inset 0 0 15px rgb(0 0 0 / 5%);
+    }
+
+    .dragdrop-highlight .empty-named {
+      border-color: var(--active--color) !important;
+      border-bottom-color: var(--active--color) !important;
+    }
+
+    // Inactive Columns are the columns in the column selector not currently
+    // selected for the `columns` field of the `ViewConfig`.
+    #inactive-columns,
+    #expression-columns {
+      & > div:not(:empty) {
+        margin-bottom: 6px;
+      }
+
+      &:empty {
+        display: none;
+        margin: 0px;
+      }
+
+      .is_column_active {
+        color: var(--inactive--color, #999);
+
+        &:before {
+          content: var(--inactive-column-selector--content, "\2610");
+          content: url("./inactive.svg");
+        }
+        &:hover:before {
+          content: var(--inactive-column-selector--content, "\2610");
+          content: url("./inactive-mouseover.svg");
+        }
+      }
+
+      .column-selector-column {
+        opacity: 0.3;
+        transition: opacity 0.3s;
+
+        &:hover {
+          opacity: 1;
+          transition: none;
+        }
+        background-color: #cdcdcd;
+        border: 1px solid #cdcdcd;
+
+        .column_selector_draggable {
+          border-bottom-color: transparent;
+          align-items: center;
+          width: calc(100% - 24px);
+        }
+      }
+    }
+  }
+}
+
+.sub-cell-scroll-enabled regular-table table {
+  tbody td,
+  thead th:not(.rt-group-corner) {
+    transform: translate(var(--regular-table--transform-x, 0px));
+  }
+
+  tbody {
+    transform: translate(0, var(--regular-table--transform-y, 0px));
+  }
+
+  tbody tr:first-child {
+    td,
+    th {
+      clip-path: polygon(
+        0 var(--regular-table--clip-y, 0),
+        0 200%,
+        200% 200%,
+        200% var(--regular-table--clip-y, 0)
+      );
+    }
+  }
+
+  thead th.rt-group-corner {
+    background: var(--plugin--background, white);
+    z-index: 1;
+  }
+
+  tbody tr td:first-of-type {
+    clip-path: polygon(
+      var(--regular-table--clip-x, 0) 0,
+      var(--regular-table--clip-x, 0) 200%,
+      200% 200%,
+      200% 0
+    );
+  }
+
+  tbody tr:first-child td:first-of-type {
+    clip-path: polygon(
+      var(--regular-table--clip-x, 0) var(--regular-table--clip-y, 0),
+      var(--regular-table--clip-x, 0) 200%,
+      200% 200%,
+      200% var(--regular-table--clip-y, 0)
+    );
+  }
+}

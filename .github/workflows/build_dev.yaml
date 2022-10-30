@@ -1,0 +1,48 @@
+#  ┌───────────────────────────────────────────────────────────────────────────┐
+#  │                                                                           │
+#  │  ██████╗ ██████╗  ██████╗   Copyright (C) 2022, The Prospective Company   │
+#  │  ██╔══██╗██╔══██╗██╔═══██╗                                                │
+#  │  ██████╔╝██████╔╝██║   ██║  This file is part of the Procss library,      │
+#  │  ██╔═══╝ ██╔══██╗██║   ██║  distributed under the terms of the            │
+#  │  ██║     ██║  ██║╚██████╔╝  Apache License 2.0.  The full license can     │
+#  │  ╚═╝     ╚═╝  ╚═╝ ╚═════╝   be found in the LICENSE file.                 │
+#  │                                                                           │
+#  └───────────────────────────────────────────────────────────────────────────┘
+
+name: Build [DEV]
+
+on:
+    push:
+        branches: ["main"]
+    pull_request:
+        branches: ["*"]
+    workflow_dispatch: {}
+
+env:
+    CARGO_TERM_COLOR: always
+
+jobs:
+    build:
+        strategy:
+            matrix:
+                os: [ubuntu-20.04]
+                rust: [nightly-2022-10-24]
+        runs-on: ${{ matrix.os }}
+        steps:
+            - uses: actions/checkout@v3
+
+            - name: "Restore cache"
+              uses: ./.github/actions/cache
+              with:
+                  name: build_dev
+                  os: ${{ matrix.os }}
+                  rust: ${{ matrix.rust }}
+
+            - name: Lint
+              run: cargo clippy
+
+            - name: Build
+              run: cargo build
+
+            - name: Test
+              run: cargo test && cargo test --doc
