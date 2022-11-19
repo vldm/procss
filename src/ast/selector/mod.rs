@@ -91,7 +91,7 @@ impl<'a> Selector<'a> {
 
     /// `SelectorGroup` uses the underlying `join()` method of the
     /// `SelectorList`, combined via the product of the two
-    /// `SelectorGroup`'s items.  Foe example:
+    /// `SelectorGroup`'s items.  For example:
     ///
     /// ```css
     /// div, span {

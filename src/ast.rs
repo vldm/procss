@@ -20,6 +20,8 @@ mod selector;
 mod token;
 mod tree_ruleset;
 
+use std::cmp::Ordering;
+
 use nom::branch::alt;
 use nom::combinator::eof;
 use nom::error::ParseError;
@@ -97,7 +99,20 @@ impl<'a> Tree<'a> {
     /// Flatten a nested [`Tree`] into a [`Css`], or in other words, convert the
     /// result of a parse into something that can be rendered.
     pub fn flatten_tree(&self) -> Css<'a> {
-        let mut css = Css(self.0.iter().flat_map(|x| x.flatten_tree()).collect());
+        let mut rules = self
+            .0
+            .iter()
+            .flat_map(|x| x.flatten_tree())
+            .collect::<Vec<_>>();
+
+        rules.sort_by(|x, y| match (x, y) {
+            (Ruleset::QualRule(_), Ruleset::QualRule(_)) => Ordering::Equal,
+            (Ruleset::QualRule(_), _) => Ordering::Less,
+            (_, Ruleset::QualRule(_)) => Ordering::Greater,
+            _ => Ordering::Equal,
+        });
+
+        let mut css = Css(rules);
         transformers::flat_self(&mut css);
         css
     }

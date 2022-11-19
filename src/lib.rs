@@ -174,9 +174,8 @@ impl<'a> BuildCss<'a> {
     }
 
     /// Add a file `path` to this build.
-    pub fn add(&mut self, path: &str) -> &Self {
+    pub fn add(&mut self, path: &str) {
         self.paths.push(path.to_owned());
-        self
     }
 
     /// Compile this [`BuildCss`] start-to-finish, applying all transforms along
