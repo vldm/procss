@@ -55,7 +55,7 @@ enum SelType<'a> {
     Class(&'a str),
     Id(&'a str),
     Pseudo(Pseudo<'a>),
-    Attr(&'a str, Option<&'a str>),
+    Attr(SelectorAttr<'a>),
 }
 
 /// A single compound CSS selector, parameterized over it's `tag` field such
@@ -66,7 +66,7 @@ pub struct SelectorTerm<'a, T> {
     pub id: Option<&'a str>,
     pub class: Vec<&'a str>,
     pub tag: T,
-    pub attribute: Vec<(&'a str, Option<&'a str>)>,
+    pub attribute: Vec<SelectorAttr<'a>>,
     pub pseudo: Vec<Pseudo<'a>>,
 }
 
@@ -82,7 +82,7 @@ impl<'a, T: Clone> SelectorTerm<'a, T> {
                 SelType::Class(x) => class.push(*x),
                 SelType::Id(x) => id = Some(x),
                 SelType::Pseudo(x) => pseudo.push(x.clone()),
-                SelType::Attr(x, y) => attribute.push((*x, *y)),
+                SelType::Attr(x) => attribute.push(x.clone()),
             }
         }
 
@@ -127,13 +127,13 @@ impl<'a, T: RenderCss> RenderCss for SelectorTerm<'a, T> {
         if !self.attribute.is_empty() {
             write!(f, "[")?;
             let mut first = true;
-            for (prop, val) in &self.attribute {
+            for SelectorAttr { name, value } in &self.attribute {
                 if !first {
                     write!(f, ",")?;
                 }
 
-                write!(f, "{}", prop)?;
-                if let Some(val) = val {
+                write!(f, "{}", name)?;
+                if let Some(val) = value {
                     write!(f, "={}", val)?;
                 }
 
@@ -164,7 +164,7 @@ impl<'a> ParseCss<'a> for SelectorTerm<'a, Option<&'a str>> {
                 preceded(tag("."), parse_symbol.map(SelType::Class)),
                 preceded(tag("#"), parse_symbol.map(SelType::Id)),
                 Pseudo::parse.map(SelType::Pseudo),
-                SelectorAttr::parse.map(|x| SelType::Attr(x.name, x.value)),
+                SelectorAttr::parse.map(SelType::Attr),
             ))),
         ))(input)?;
 
@@ -190,7 +190,7 @@ impl<'a> ParseCss<'a> for SelectorTerm<'a, ()> {
                 preceded(tag("."), parse_symbol.map(SelType::Class)),
                 preceded(tag("#"), parse_symbol.map(SelType::Id)),
                 Pseudo::parse.map(SelType::Pseudo),
-                SelectorAttr::parse.map(|x| SelType::Attr(x.name, x.value)),
+                SelectorAttr::parse.map(SelType::Attr),
             ))),
         ))(input)?;
 
@@ -244,7 +244,7 @@ mod tests {
             Ok(("", SelectorTerm {
                 attribute,
                 ..
-            })) if attribute == vec![("name", Some("test"))]
+            })) if attribute == vec![SelectorAttr{ name: "name", value: Some("test") }]
         )
     }
 

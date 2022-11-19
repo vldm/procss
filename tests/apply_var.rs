@@ -37,3 +37,24 @@ fn test_var() {
         Ok("div.open{color:#FF1111;}")
     )
 }
+
+#[test]
+fn test_var_overlapping_name() {
+    assert_matches!(
+        parse(
+            "
+            @blue: #CCCCFF;
+            @bluemore: #0000FF;
+            div.open {
+                color: @bluemore;
+            }
+        "
+        )
+        .map(|mut x| {
+            apply_var(&mut x);
+            x.flatten_tree().as_css_string()
+        })
+        .as_deref(),
+        Ok("div.open{color:#0000FF;}")
+    )
+}
