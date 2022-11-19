@@ -30,6 +30,9 @@ pub fn apply_var<'a>(tree: &mut Tree<'a>) {
         }
     });
 
+    let mut mixins = mixins.iter().collect::<Vec<_>>();
+    mixins.sort_by(|(x, _), (a, _)| x.len().cmp(&a.len()));
+    mixins.reverse();
     tree.transform(|rule: &mut Rule| {
         for (var, val) in mixins.iter() {
             rule.value = rule.value.replace(&format!("@{}", var), val).into();
