@@ -146,3 +146,22 @@ fn test_scss_example() {
         Ok("ul{margin-left:1em;}ul li{list-style-type:none;}")
     )
 }
+
+#[test]
+fn test_nested_order_is_preserved() {
+    let complex = "
+        div {
+            & {
+                color: red;
+            }
+            color: green;
+        }
+    ";
+
+    assert_matches!(
+        parse(complex)
+            .map(|x| x.flatten_tree().as_css_string())
+            .as_deref(),
+        Ok("div{color:red;}div{color:green;}")
+    )
+}
