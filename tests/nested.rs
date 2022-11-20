@@ -73,7 +73,7 @@ fn test_self() {
 }
 
 #[test]
-fn test_settings() {
+fn test_id_overrides_parent() {
     let complex = "
         #test {
             &#test2:before {
@@ -86,7 +86,7 @@ fn test_settings() {
         parse(complex)
             .map(|x| x.flatten_tree().as_css_string())
             .as_deref(),
-        Ok("#test:before{color:red;}")
+        Ok("#test2:before{color:red;}")
     )
 }
 
@@ -163,5 +163,26 @@ fn test_nested_order_is_preserved() {
             .map(|x| x.flatten_tree().as_css_string())
             .as_deref(),
         Ok("div{color:red;}div{color:green;}")
+    )
+}
+
+#[test]
+fn test_complex_nesting() {
+    let complex = "
+input {
+    &:before {
+        color: white;
+    }
+    &#my_id:before {
+        color: red;
+    }
+}
+    ";
+
+    assert_matches!(
+        parse(complex)
+            .map(|x| x.flatten_tree().as_css_string())
+            .as_deref(),
+        Ok("input:before{color:white;}input#my_id:before{color:red;}")
     )
 }
