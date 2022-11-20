@@ -45,4 +45,4 @@ jobs:
               run: cargo build
 
             - name: Test
-              run: cargo test && cargo test --doc
+              run: cargo test --features iotest && cargo test --doc --features iotest

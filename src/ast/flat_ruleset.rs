@@ -11,7 +11,7 @@
 
 use super::ruleset::{Rule, Ruleset};
 use super::selector::SelectorPath;
-use super::{QualNestedRuleset, SelectorRuleset};
+use super::SelectorRuleset;
 use crate::transform::TransformCss;
 
 /// A flat (non-recursive) block, suitable for compatibility with modern

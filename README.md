@@ -14,14 +14,14 @@ Test
 
 ```bash
 cargo clippy
-cargo test --doc
+cargo test --doc --features iotest
 cargo nextest run
 ```
 
 Bench
 
 ```bash
-cargo bench --features bench -- --save-baseline my-baseline
+cargo bench --features iotest -- --save-baseline my-baseline
 ```
 
 Generate docs (output at `./target/doc/procss/index.html`)

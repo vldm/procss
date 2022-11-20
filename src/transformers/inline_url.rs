@@ -18,14 +18,14 @@ use nom::sequence::delimited;
 
 use crate::ast::{Css, Rule};
 
-#[cfg(feature = "bench")]
+#[cfg(feature = "iotest")]
 mod fs {
     pub fn read_to_string(_input: &std::path::Path) -> Result<&'static str, String> {
         criterion::black_box(Ok(include_str!("../../benches/test.svg")))
     }
 }
 
-#[cfg(not(feature = "bench"))]
+#[cfg(not(feature = "iotest"))]
 mod fs {
     pub use std::fs::read_to_string;
 }
