@@ -32,7 +32,7 @@ use crate::transform::TransformCss;
 use crate::utils::*;
 
 /// A set of selector alternatives separated by `,`, for example `div, span`.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct Selector<'a>(MinVec<SelectorPath<'a>, 1>);
 
 impl<'a> Default for Selector<'a> {

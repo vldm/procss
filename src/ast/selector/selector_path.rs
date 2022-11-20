@@ -26,7 +26,7 @@ use crate::render::*;
 /// selector `&`, as special case `PartialCons` elimantes `tag` as a field from
 /// this first Selector, preventing the `SelectorList` from being serialized
 /// before being flattened.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub enum SelectorPath<'a> {
     Cons(
         SelectorTerm<'a, Option<&'a str>>,

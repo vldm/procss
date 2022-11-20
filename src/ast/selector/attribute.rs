@@ -27,7 +27,7 @@ use crate::parser::*;
 /// div[name=test] {}
 /// div[disabled,data-value="red"] {}
 /// ```
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct SelectorAttr<'a> {
     pub name: &'a str,
     pub value: Option<&'a str>,

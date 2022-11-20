@@ -11,6 +11,7 @@
 
 use super::ruleset::{Rule, Ruleset};
 use super::selector::SelectorPath;
+use super::{QualNestedRuleset, SelectorRuleset};
 use crate::transform::TransformCss;
 
 /// A flat (non-recursive) block, suitable for compatibility with modern
@@ -36,6 +37,16 @@ impl<'a> TransformCss<SelectorPath<'a>> for FlatRuleset<'a> {
             Ruleset::QualRule(_) => (),
             Ruleset::QualRuleset(_) => (),
             Ruleset::QualNestedRuleset(ruleset) => ruleset.transform_each(f),
+        }
+    }
+}
+
+impl<'a> TransformCss<SelectorRuleset<'a, Rule<'a>>> for FlatRuleset<'a> {
+    fn transform_each<F: FnMut(&mut SelectorRuleset<'a, Rule<'a>>)>(&mut self, f: &mut F) {
+        match self {
+            Ruleset::SelectorRuleset(ruleset) => f(ruleset),
+            Ruleset::QualNestedRuleset(ruleset) => ruleset.transform_each(f),
+            _ => (),
         }
     }
 }

@@ -203,6 +203,7 @@ impl<'a> BuildCss<'a> {
             transformers::apply_var(tree);
             let mut flat = tree.flatten_tree();
             transformers::inline_url(self.rootdir)(&mut flat);
+            transformers::dedupe(&mut flat);
             self.css.insert(path, flat);
         }
 

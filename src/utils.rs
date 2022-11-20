@@ -12,7 +12,7 @@
 use crate::render::RenderCss;
 
 /// A wrapper around [`Vec`] which guarantees at least `N` elements.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct MinVec<T, const N: usize>([T; N], Vec<T>);
 
 impl<T, const N: usize> MinVec<T, N>
