@@ -224,6 +224,12 @@ impl<'a> TreeSelectorRuleset<'a> {
             match rule {
                 TreeRule::Rule(rule) => new_rules.push(rule.clone()),
                 TreeRule::Ruleset(ruleset) => {
+                    if !new_rules.is_empty() {
+                        let ruleset = SelectorRuleset(self.0.clone(), new_rules);
+                        new_rulesets.push(Ruleset::SelectorRuleset(ruleset));
+                        new_rules = vec![];
+                    }
+
                     let sub_rules = ruleset
                         .flatten_tree()
                         .into_iter()
@@ -235,7 +241,7 @@ impl<'a> TreeSelectorRuleset<'a> {
 
         if !new_rules.is_empty() {
             let ruleset = SelectorRuleset(self.0.clone(), new_rules);
-            new_rulesets.insert(0, Ruleset::SelectorRuleset(ruleset));
+            new_rulesets.push(Ruleset::SelectorRuleset(ruleset));
         }
 
         new_rulesets
