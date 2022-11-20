@@ -96,15 +96,18 @@ impl<'a, T: Clone> SelectorTerm<'a, T> {
     }
 
     /// Join to another "self" selector.
+    /// TODO Joining two selectors with populated `id` fields will discard the
+    /// parent's `id`.
     pub fn join(&self, other: &SelectorTerm<'a, ()>) -> Self {
         let mut class = self.class.clone();
         let mut attribute = self.attribute.clone();
         let mut pseudo = self.pseudo.clone();
+        let id = other.id.or(self.id);
         class.append(&mut other.class.clone());
         attribute.append(&mut other.attribute.clone());
         pseudo.append(&mut other.pseudo.clone());
         SelectorTerm {
-            id: self.id,
+            id,
             class,
             tag: self.tag.clone(),
             attribute,
