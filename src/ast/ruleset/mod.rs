@@ -51,7 +51,7 @@ impl<'a> TransformCss<SelectorPath<'a>> for SelectorRuleset<'a, Rule<'a>> {
 /// ```css
 /// @import "test.css";
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct QualRule<'a>(pub &'a str, pub Option<&'a str>);
 
 impl<'a> ParseCss<'a> for QualRule<'a> {
@@ -111,10 +111,10 @@ impl<'a, T: RenderCss> RenderCss for QualRuleset<'a, T> {
     }
 }
 
-impl<'a, T: TransformCss<Rule<'a>>> TransformCss<Rule<'a>> for QualRuleset<'a, T> {
-    fn transform_each<F: FnMut(&mut Rule<'a>)>(&mut self, f: &mut F) {
-        for x in self.1.iter_mut() {
-            x.transform_each(f)
+impl<'a, T: TransformCss<U>, U> TransformCss<U> for QualRuleset<'a, T> {
+    fn transform_each<F: FnMut(&mut U)>(&mut self, f: &mut F) {
+        for ruleset in self.1.iter_mut() {
+            ruleset.transform_each(f);
         }
     }
 }
@@ -153,16 +153,11 @@ impl<'a, T: RenderCss> RenderCss for QualNestedRuleset<'a, T> {
     }
 }
 
-impl<'a, T: TransformCss<Rule<'a>>> TransformCss<Rule<'a>> for QualNestedRuleset<'a, T> {
-    fn transform_each<F: FnMut(&mut Rule<'a>)>(&mut self, f: &mut F) {
-        for rule in self.1.iter_mut() {
-            rule.transform_each(f);
-        }
-    }
-}
-
-impl<'a> TransformCss<SelectorPath<'a>> for QualNestedRuleset<'a, Rule<'a>> {
-    fn transform_each<F: FnMut(&mut SelectorPath<'a>)>(&mut self, f: &mut F) {
+impl<'a, T, U> TransformCss<U> for QualNestedRuleset<'a, T>
+where
+    Ruleset<'a, T>: TransformCss<U>,
+{
+    fn transform_each<F: FnMut(&mut U)>(&mut self, f: &mut F) {
         for ruleset in self.1.iter_mut() {
             ruleset.transform_each(f);
         }
@@ -208,10 +203,7 @@ impl<'a, T: RenderCss> RenderCss for Ruleset<'a, T> {
 }
 
 impl<'a, T: TransformCss<Rule<'a>>> TransformCss<Rule<'a>> for Ruleset<'a, T> {
-    fn transform_each<F>(&mut self, f: &mut F)
-    where
-        F: FnMut(&mut Rule<'a>),
-    {
+    fn transform_each<F: FnMut(&mut Rule<'a>)>(&mut self, f: &mut F) {
         match self {
             Ruleset::QualRule(_) => (),
             Ruleset::QualRuleset(rules) => rules.transform_each(f),

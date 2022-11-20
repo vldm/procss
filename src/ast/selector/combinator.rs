@@ -20,7 +20,7 @@ use crate::parser::*;
 use crate::render::*;
 
 /// A selector combinator, used to combine a list of selectors.
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub enum Combinator {
     Null,
     Sibling,

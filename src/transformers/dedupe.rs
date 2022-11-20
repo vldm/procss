@@ -9,35 +9,27 @@
 // │                                                                           │
 // └───────────────────────────────────────────────────────────────────────────┘
 
-//! A collection of transformer functions, utilizing the
-//! [`crate::ast::Css::transform`] and [`crate::ast::Tree::transform`] methods
-//! to apply various useful transformations on their respective structs.  The
-//! exports from [`crate::transformers`] are functions which take a `&mut` to
-//! either [`crate::ast::Css`] or [`crate::ast::Tree`].
-//!
-//! # Example
-//!
-//! ```rust
-//! use procss::transformers::apply_mixin;
-//! use procss::{parse, RenderCss};
-//!
-//! let mut tree = parse("div{color:red}").unwrap();
-//! apply_mixin(&mut tree);
-//! let css = tree.flatten_tree().as_css_string();
-//! ```
+use crate::ast::Ruleset::{self};
+use crate::ast::*;
 
-mod apply_import;
-mod apply_mixin;
-mod apply_var;
-mod dedupe;
-mod filter_refs;
-mod flat_self;
-mod inline_url;
+pub fn dedupe(css: &mut Css) {
+    let mut res = vec![];
+    let reduced = css.iter().cloned().reduce(|x, y| match (x, y) {
+        (Ruleset::QualRule(x), Ruleset::QualRule(y)) if x == y => Ruleset::QualRule(x),
+        (Ruleset::SelectorRuleset(x), Ruleset::SelectorRuleset(y)) if x.0 == y.0 => {
+            let mut tail = x.1.clone();
+            tail.extend(y.1);
+            Ruleset::SelectorRuleset(SelectorRuleset(x.0.clone(), tail))
+        }
+        x => {
+            res.push(x.0);
+            x.1
+        }
+    });
 
-pub use self::apply_import::apply_import;
-pub use self::apply_mixin::apply_mixin;
-pub use self::apply_var::apply_var;
-pub use self::dedupe::dedupe;
-pub use self::filter_refs::filter_refs;
-pub(crate) use self::flat_self::flat_self;
-pub use self::inline_url::inline_url;
+    if let Some(reduced) = reduced {
+        res.push(reduced.clone());
+    }
+
+    *css = crate::ast::Css(res)
+}

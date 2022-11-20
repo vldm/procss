@@ -87,7 +87,7 @@ criterion_main!(overall, parser, other);
 
 // `bench` feature flag stubs out disk-accessing and other performance
 // neutering function
-#[cfg(all(not(feature = "bench"), not(debug_assertions)))]
+#[cfg(all(not(feature = "iotest"), not(debug_assertions)))]
 compile_error!(
     "Feature 'bench' must be enabled - rerun like this:\n\n    cargo bench --features bench\n\n"
 );

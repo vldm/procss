@@ -183,7 +183,7 @@ impl<'a> BuildCss<'a> {
     pub fn compile(&'a mut self) -> anyhow::Result<CompiledCss<'a>> {
         for path in &self.paths {
             let inpath = PathBuf::from(self.rootdir).join(path);
-            let contents = if cfg!(debug_assertions) {
+            let contents = if cfg!(feature = "iotest") {
                 "div{}".to_owned()
             } else {
                 fs::read_to_string(inpath)?
@@ -203,6 +203,7 @@ impl<'a> BuildCss<'a> {
             transformers::apply_var(tree);
             let mut flat = tree.flatten_tree();
             transformers::inline_url(self.rootdir)(&mut flat);
+            transformers::dedupe(&mut flat);
             self.css.insert(path, flat);
         }
 
@@ -226,7 +227,7 @@ impl<'a> CompiledCss<'a> {
             );
 
             let outdir = PathBuf::from(outdir).join(outpath.parent().unwrap());
-            if !cfg!(debug_assertions) {
+            if !cfg!(feature = "iotest") {
                 fs::create_dir_all(outdir.clone()).unwrap_or_default();
                 fs::write(outdir.join(outfile), css.as_css_string())?;
             }

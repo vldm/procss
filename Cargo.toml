@@ -23,7 +23,7 @@ name = "basic"
 harness = false
 
 [features]
-bench = []
+iotest = []
 
 [dependencies]
 nom = "7.1.1"

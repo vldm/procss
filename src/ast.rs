@@ -42,7 +42,7 @@ use crate::transformers;
 /// [`Css`] AST is typically generated via the
 /// [`crate::ast::Tree::flatten_tree`] method.
 #[derive(Debug)]
-pub struct Css<'a>(Vec<FlatRuleset<'a>>);
+pub struct Css<'a>(pub Vec<FlatRuleset<'a>>);
 
 impl<'a> Css<'a> {
     /// A mutable transform which walks this AST recursively, invoking `f` for
@@ -64,6 +64,11 @@ impl<'a> Css<'a> {
         Self: TransformCss<T>,
     {
         self.transform_each(&mut f)
+    }
+
+    /// Iterate over the immediate children of this Tree (non-recursive).
+    pub fn iter(&self) -> impl Iterator<Item = &'_ FlatRuleset<'a>> {
+        self.0.iter()
     }
 }
 

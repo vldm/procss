@@ -24,7 +24,7 @@ use crate::render::*;
 
 /// A pseudo-selector component of a `Selector`, including optional argument
 /// selector (parenthesis delimited).
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct Pseudo<'a> {
     property: &'a str,
     value: Option<SelectorTerm<'a, Option<&'a str>>>,
@@ -61,7 +61,7 @@ enum SelType<'a> {
 /// A single compound CSS selector, parameterized over it's `tag` field such
 /// that the uniqu wildcard and self selectors can re-use the same struct and
 /// some tag-irrelevent functions can be shared between impls.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Hash)]
 pub struct SelectorTerm<'a, T> {
     pub id: Option<&'a str>,
     pub class: Vec<&'a str>,
