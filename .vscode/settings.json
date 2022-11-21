@@ -1,4 +1,5 @@
 {
-  "rust-analyzer.checkOnSave.command": "clippy",
-  "rust-analyzer.lens.enable": false
+    "rust-analyzer.checkOnSave.command": "clippy",
+    "rust-analyzer.lens.enable": false,
+    "rust-analyzer.cargo.features": ["iotest"]
 }

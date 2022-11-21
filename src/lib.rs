@@ -86,6 +86,7 @@ pub mod transformers;
 mod utils;
 
 use std::collections::HashMap;
+#[cfg(not(feature = "iotest"))]
 use std::fs;
 use std::path::PathBuf;
 
@@ -183,12 +184,7 @@ impl<'a> BuildCss<'a> {
     pub fn compile(&'a mut self) -> anyhow::Result<CompiledCss<'a>> {
         for path in &self.paths {
             let inpath = PathBuf::from(self.rootdir).join(path);
-            let contents = if cfg!(feature = "iotest") {
-                "div{}".to_owned()
-            } else {
-                fs::read_to_string(inpath)?
-            };
-
+            let contents = fs::read_to_string(inpath)?;
             self.contents.insert(path, contents);
         }
 
@@ -202,7 +198,8 @@ impl<'a> BuildCss<'a> {
             transformers::apply_mixin(tree);
             transformers::apply_var(tree);
             let mut flat = tree.flatten_tree();
-            transformers::inline_url(self.rootdir)(&mut flat);
+            let outdir = utils::join_paths(self.rootdir, path);
+            transformers::inline_url(&outdir.to_string_lossy())(&mut flat);
             transformers::dedupe(&mut flat);
             self.css.insert(path, flat);
         }
@@ -226,13 +223,30 @@ impl<'a> CompiledCss<'a> {
                     .to_string_lossy()
             );
 
-            let outdir = PathBuf::from(outdir).join(outpath.parent().unwrap());
-            if !cfg!(feature = "iotest") {
-                fs::create_dir_all(outdir.clone()).unwrap_or_default();
-                fs::write(outdir.join(outfile), css.as_css_string())?;
-            }
+            let outdir = utils::join_paths(outdir, path);
+            fs::create_dir_all(outdir.clone()).unwrap_or_default();
+            fs::write(outdir.join(outfile), css.as_css_string())?;
         }
 
+        Ok(())
+    }
+}
+
+#[cfg(feature = "iotest")]
+mod fs {
+    //! In test mode, don't touch the file system.
+    pub fn read_to_string<P: AsRef<std::path::Path>>(_path: P) -> std::io::Result<String> {
+        Ok("div{}".to_owned())
+    }
+
+    pub fn write<P: AsRef<std::path::Path>, C: AsRef<[u8]>>(
+        _path: P,
+        _contents: C,
+    ) -> std::io::Result<()> {
+        Ok(())
+    }
+
+    pub fn create_dir_all<P: AsRef<std::path::Path>>(_path: P) -> std::io::Result<()> {
         Ok(())
     }
 }
@@ -261,3 +275,8 @@ mod tests {
         )
     }
 }
+
+// `iotest` feature flag stubs out disk-accessing and other performance
+// neutering function
+#[cfg(all(not(feature = "iotest"), test))]
+compile_error!("Feature 'iotest' must be enabled:\n\n> cargo test --features iotest\n\n");

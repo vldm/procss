@@ -48,10 +48,7 @@ impl<'a> RenderCss for Rule<'a> {
 // TODO property is not the same parser as tag.
 // TODO this Cow is not borrowed ...
 impl<'a> crate::parser::ParseCss<'a> for Rule<'a> {
-    fn parse<E>(input: &'a str) -> IResult<&'a str, Self, E>
-    where
-        E: ParseError<&'a str>,
-    {
+    fn parse<E: ParseError<&'a str>>(input: &'a str) -> IResult<&'a str, Self, E> {
         let (input, property) = parse_symbol(input)?;
         let (input, _) = tuple((comment0, tag(":"), comment0))(input)?;
         let (input, value) =

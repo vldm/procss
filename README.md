@@ -1,6 +1,10 @@
 # <b>PRO</b><i>CSS</i>
 
+[![CI](https://github.com/ProspectiveCo/procss/actions/workflows/build_dev.yaml/badge.svg)](https://github.com/ProspectiveCo/procss/actions/workflows/build_dev.yaml)
+
 A simple CSS parsing and transformation framework.
+
+[Docs](https://crates.io/crates/procss)
 
 ## Developer Setup
 
@@ -13,9 +17,14 @@ cargo build --release
 Test
 
 ```bash
+cargo test --features iotest
+```
+
+Lint
+
+```bash
 cargo clippy
-cargo test --doc --features iotest
-cargo nextest run
+cargo fmt
 ```
 
 Bench
