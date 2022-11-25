@@ -11,26 +11,25 @@ A simple CSS parsing and transformation framework.
 Build
 
 ```bash
-cargo build --release
+cargo build
 ```
 
 Test
 
 ```bash
-cargo test --features iotest
+cargo xtest
 ```
 
 Lint
 
 ```bash
 cargo clippy
-cargo fmt
 ```
 
 Bench
 
 ```bash
-cargo bench --features iotest -- --save-baseline my-baseline
+cargo xbench
 ```
 
 Generate docs (output at `./target/doc/procss/index.html`)

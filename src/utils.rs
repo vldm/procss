@@ -63,3 +63,28 @@ pub fn join_paths(outdir: &str, path: &str) -> PathBuf {
         PathBuf::from(outdir)
     }
 }
+
+#[cfg(feature = "iotest")]
+mod mock {
+    #[mockall::automock]
+    pub trait IoTestFs {
+        fn read_to_string(path: &std::path::Path) -> std::io::Result<String>;
+        // where
+        //     P: AsRef<std::path::Path> + 'static;
+
+        fn create_dir_all<P>(path: P) -> std::io::Result<()>
+        where
+            P: AsRef<std::path::Path> + 'static;
+
+        fn write<P, C>(path: P, content: C) -> std::io::Result<()>
+        where
+            P: AsRef<std::path::Path> + 'static,
+            C: AsRef<[u8]> + 'static;
+    }
+}
+
+#[cfg(not(feature = "iotest"))]
+pub use std::fs;
+
+#[cfg(feature = "iotest")]
+pub use mock::{IoTestFs, MockIoTestFs as fs};

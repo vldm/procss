@@ -1,0 +1,3 @@
+[alias]
+xbench = "bench --features iotest"
+xtest = "run -p procss-xtest"

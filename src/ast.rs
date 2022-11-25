@@ -98,7 +98,7 @@ impl<'a> RenderCss for Css<'a> {
 /// browsers and is not identical to the input since whitespace has been
 /// discarded.
 #[derive(Clone, Debug)]
-pub struct Tree<'a>(pub(crate) Vec<TreeRuleset<'a>>);
+pub struct Tree<'a>(pub Vec<TreeRuleset<'a>>);
 
 impl<'a> Tree<'a> {
     /// Flatten a nested [`Tree`] into a [`Css`], or in other words, convert the

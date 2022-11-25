@@ -8,6 +8,11 @@ repository = "https://github.com/ProspectiveCo/procss"
 license = "Apache-2.0"
 keywords = ["compiler", "web", "css"]
 
+[workspace]
+members = [
+    "tasks/xtest"
+]
+
 [lib]
 name = "procss"
 path = "src/lib.rs"
@@ -30,6 +35,7 @@ nom = "7.1.1"
 anyhow = "1.0.56"
 base64 = "0.13.1"
 criterion = { version = "0.3", features = ["html_reports"] }
+mockall = "0.11.3"
 
 [profile.release]
 lto = true

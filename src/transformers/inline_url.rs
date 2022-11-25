@@ -17,18 +17,9 @@ use nom::bytes::complete::{is_not, tag};
 use nom::sequence::delimited;
 
 use crate::ast::{Css, Rule};
-
+use crate::utils::fs;
 #[cfg(feature = "iotest")]
-mod fs {
-    pub fn read_to_string(_input: &std::path::Path) -> Result<&'static str, String> {
-        criterion::black_box(Ok(include_str!("../../benches/test.svg")))
-    }
-}
-
-#[cfg(not(feature = "iotest"))]
-mod fs {
-    pub use std::fs::read_to_string;
-}
+use crate::utils::IoTestFs;
 
 fn parse_url(input: &str) -> nom::IResult<&str, &str> {
     let unquoted = delimited(tag("url("), is_not(")"), tag(")"));
@@ -54,7 +45,8 @@ fn inline_url_impl<'a>(newpath: &str, flat: &mut Css<'a>) {
     })
 }
 
-/// Inline `url()` properties with the base64 encoded contents of their files.
+/// Inline `url()` rule properties containing local paths to be replace with the
+/// base64 encoded contents of their respective files.
 pub fn inline_url<'a: 'b, 'b>(newpath: &'b str) -> impl Fn(&mut Css<'a>) + 'b {
     |flat| inline_url_impl(newpath, flat)
 }

@@ -88,4 +88,4 @@ criterion_main!(overall, parser, other);
 // `iotest` feature flag stubs out disk-accessing and other performance
 // neutering function
 #[cfg(all(not(feature = "iotest"), not(debug_assertions)))]
-compile_error!("Feature 'iotest' must be enabled:\n\n> cargo bench --features iotest\n\n");
+compile_error!("Feature 'iotest' must be enabled, rerun with:\n\n> cargo xbench\n\n");

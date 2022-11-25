@@ -67,35 +67,28 @@
 //! [`transformers::apply_import`]) as the compilation is left-folded over the
 //! inputs.
 //!
-//! ```
+//! ```no_run
 //! let mut build = procss::BuildCss::new("./src");
 //! build.add("controls/menu.scss");
 //! build.add("logout.scss"); // imports "controls/menu.scss"
 //! build.add("my_app.scss"); // imports "controls/menu.scss" and "logout.scss"
-//! build.compile().unwrap().write("./dist").unwrap();
+//! build.compile("./dist").unwrap();
 //! ```
 
 #![feature(assert_matches)]
 #![feature(path_file_prefix)]
 
 pub mod ast;
+mod builder;
 mod parser;
 mod render;
 mod transform;
 pub mod transformers;
 mod utils;
 
-use std::collections::HashMap;
-#[cfg(not(feature = "iotest"))]
-use std::fs;
-use std::path::PathBuf;
-
-use anyhow::{anyhow, Context};
-use nom::error::convert_error;
-use nom::Err;
-
 use self::ast::Tree;
-use self::parser::ParseCss;
+pub use self::builder::BuildCss;
+use self::parser::{unwrap_parse_error, ParseCss};
 pub use self::render::RenderCss;
 
 /// Parse CSS text to a [`Tree`] (where it can be further manipulated),
@@ -108,18 +101,8 @@ pub use self::render::RenderCss;
 /// let ast = procss::parse("div { .open { color: red; }}").unwrap();
 /// ```
 pub fn parse(input: &str) -> anyhow::Result<Tree<'_>> {
-    let (rest, x) = Tree::parse(input).map_err(|err| match err {
-        Err::Error(e) | Err::Failure(e) => {
-            anyhow!("Error parsing, unknown:\n{}", convert_error(input, e))
-        }
-        Err::Incomplete(needed) => anyhow!("Error parsing, unexpected input:\n {:?}", needed),
-    })?;
-
-    if rest.is_empty() {
-        Ok(x)
-    } else {
-        Err(anyhow!("Error parsing, unreachable:\n {}", rest))
-    }
+    let (_, tree) = Tree::parse(input).map_err(|err| unwrap_parse_error(input, err))?;
+    Ok(tree)
 }
 
 /// Parse CSS text to a [`Tree`], without capturing error details, for maximum
@@ -131,124 +114,8 @@ pub fn parse(input: &str) -> anyhow::Result<Tree<'_>> {
 /// let ast = procss::parse_unchecked("div { .open { color: red; }}").unwrap();
 /// ```
 pub fn parse_unchecked(input: &str) -> anyhow::Result<Tree<'_>> {
-    let (rest, x) = Tree::parse::<()>(input)?;
-    if rest.is_empty() {
-        Ok(x)
-    } else {
-        Err(anyhow!("Error parsing, unreachable:\n {}", rest))
-    }
-}
-
-/// A CSS+ project build, comprising a collection of CSS+ files which may
-/// reference eachother (via `@import`).
-pub struct BuildCss<'a> {
-    paths: Vec<String>,
-    contents: HashMap<&'a str, String>,
-    trees: HashMap<&'a str, ast::Tree<'a>>,
-    css: HashMap<&'a str, ast::Css<'a>>,
-    rootdir: &'static str,
-}
-
-/// The compiled output of a [`BuildCss`] collection, obtained from
-/// [`BuildCss::compile`].  
-pub struct CompiledCss<'a>(&'a BuildCss<'a>);
-
-/// An incremental build struct for compiling a project's CSS sources.
-///
-/// # Example
-///
-/// ```
-/// let mut build = procss::BuildCss::new("./src");
-/// build.add("app.scss");
-/// build.compile().unwrap().write("./dist").unwrap();
-/// ```
-impl<'a> BuildCss<'a> {
-    /// Create a new [`BuildCss`] rooted at `rootdir`.
-    pub fn new(rootdir: &'static str) -> Self {
-        Self {
-            paths: Default::default(),
-            contents: Default::default(),
-            trees: Default::default(),
-            css: Default::default(),
-            rootdir,
-        }
-    }
-
-    /// Add a file `path` to this build.
-    pub fn add(&mut self, path: &str) {
-        self.paths.push(path.to_owned());
-    }
-
-    /// Compile this [`BuildCss`] start-to-finish, applying all transforms along
-    /// the way.
-    pub fn compile(&'a mut self) -> anyhow::Result<CompiledCss<'a>> {
-        for path in &self.paths {
-            let inpath = PathBuf::from(self.rootdir).join(path);
-            let contents = fs::read_to_string(inpath)?;
-            self.contents.insert(path, contents);
-        }
-
-        for (path, contents) in &self.contents {
-            self.trees.insert(path, parse(contents)?);
-        }
-
-        let trees = self.trees.clone();
-        for (path, tree) in self.trees.iter_mut() {
-            transformers::apply_import(&trees)(tree);
-            transformers::apply_mixin(tree);
-            transformers::apply_var(tree);
-            let mut flat = tree.flatten_tree();
-            let outdir = utils::join_paths(self.rootdir, path);
-            transformers::inline_url(&outdir.to_string_lossy())(&mut flat);
-            transformers::dedupe(&mut flat);
-            self.css.insert(path, flat);
-        }
-
-        Ok(CompiledCss(self))
-    }
-}
-
-impl<'a> CompiledCss<'a> {
-    /// Write this struct's compiled data to `outdir`, preserving the relative
-    /// subdirectory structure of the `input` sources passed to
-    /// [`BuildCss::add`], relative to `outdir`.
-    pub fn write(self, outdir: &'static str) -> anyhow::Result<()> {
-        for (path, css) in &self.0.css {
-            let outpath = PathBuf::from(path);
-            let outfile = format!(
-                "{}.css",
-                outpath
-                    .file_prefix()
-                    .context("No Prefix")?
-                    .to_string_lossy()
-            );
-
-            let outdir = utils::join_paths(outdir, path);
-            fs::create_dir_all(outdir.clone()).unwrap_or_default();
-            fs::write(outdir.join(outfile), css.as_css_string())?;
-        }
-
-        Ok(())
-    }
-}
-
-#[cfg(feature = "iotest")]
-mod fs {
-    //! In test mode, don't touch the file system.
-    pub fn read_to_string<P: AsRef<std::path::Path>>(_path: P) -> std::io::Result<String> {
-        Ok("div{}".to_owned())
-    }
-
-    pub fn write<P: AsRef<std::path::Path>, C: AsRef<[u8]>>(
-        _path: P,
-        _contents: C,
-    ) -> std::io::Result<()> {
-        Ok(())
-    }
-
-    pub fn create_dir_all<P: AsRef<std::path::Path>>(_path: P) -> std::io::Result<()> {
-        Ok(())
-    }
+    let (_, tree) = Tree::parse::<()>(input)?;
+    Ok(tree)
 }
 
 #[cfg(test)]
@@ -279,4 +146,4 @@ mod tests {
 // `iotest` feature flag stubs out disk-accessing and other performance
 // neutering function
 #[cfg(all(not(feature = "iotest"), test))]
-compile_error!("Feature 'iotest' must be enabled:\n\n> cargo test --features iotest\n\n");
+compile_error!("Feature 'iotest' must be enabled, rerun with:\n\n> cargo xtest");
