@@ -9,28 +9,42 @@
 // │                                                                           │
 // └───────────────────────────────────────────────────────────────────────────┘
 
-use anyhow::anyhow;
-use nom::error::{convert_error, ParseError, VerboseError};
-use nom::{Err, IResult};
+#![feature(assert_matches)]
 
-/// A trait for CSS AST types which can be parsed from a String.
-pub trait ParseCss<'a>
-where
-    Self: Sized,
-{
-    /// Parse an input string into the trait implementor, parameterized by an
-    /// invoker-chosen `E` error type which allows compile-time choice between
-    /// fast or debug parser implementations.
-    fn parse<E>(input: &'a str) -> IResult<&'a str, Self, E>
-    where
-        E: ParseError<&'a str>;
-}
+#[cfg(test)]
+use std::assert_matches::assert_matches;
 
-pub fn unwrap_parse_error(input: &str, err: Err<VerboseError<&str>>) -> anyhow::Error {
-    match err {
-        Err::Error(e) | Err::Failure(e) => {
-            anyhow!("Error parsing, unknown:\n{}", convert_error(input, e))
-        }
-        Err::Incomplete(needed) => anyhow!("Error parsing, unexpected input:\n {:?}", needed),
-    }
+use procss::transformers::filter_refs;
+use procss::{ast, parse};
+
+#[test]
+fn test_filter_refs() {
+    assert_matches!(
+        parse(
+            "
+            div {
+                color: green;
+            }
+
+            @red: #ff0000;
+
+            @font-face {
+                name: \"test\";
+            }
+
+            @media (min-width: 100px) {
+                @media (max-width: 100px) {
+                    div {
+                        color: green;
+                    }
+                }
+            }
+        "
+        )
+        .map(|mut x| {
+            filter_refs(&mut x);
+            x
+        }),
+        Ok(ast::Tree(x)) if x.len() == 3
+    )
 }

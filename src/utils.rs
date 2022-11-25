@@ -9,6 +9,8 @@
 // │                                                                           │
 // └───────────────────────────────────────────────────────────────────────────┘
 
+use std::path::PathBuf;
+
 use crate::render::RenderCss;
 
 /// A wrapper around [`Vec`] which guarantees at least `N` elements.
@@ -49,3 +51,40 @@ impl<T: RenderCss, const N: usize> RenderCss for MinVec<T, N> {
         Ok(())
     }
 }
+
+/// Givens a root path `outdir` and a relative path `path`, remove the extension
+/// to the latter and join with the former.  If the latter path is not relative,
+/// return the former.  Useful for moving directory trees while retaining their
+/// relative structure to some root.
+pub fn join_paths(outdir: &str, path: &str) -> PathBuf {
+    if let Some(parent) = PathBuf::from(path).parent() {
+        PathBuf::from(outdir).join(parent)
+    } else {
+        PathBuf::from(outdir)
+    }
+}
+
+#[cfg(feature = "iotest")]
+mod mock {
+    #[mockall::automock]
+    pub trait IoTestFs {
+        fn read_to_string(path: &std::path::Path) -> std::io::Result<String>;
+        // where
+        //     P: AsRef<std::path::Path> + 'static;
+
+        fn create_dir_all<P>(path: P) -> std::io::Result<()>
+        where
+            P: AsRef<std::path::Path> + 'static;
+
+        fn write<P, C>(path: P, content: C) -> std::io::Result<()>
+        where
+            P: AsRef<std::path::Path> + 'static,
+            C: AsRef<[u8]> + 'static;
+    }
+}
+
+#[cfg(not(feature = "iotest"))]
+pub use std::fs;
+
+#[cfg(feature = "iotest")]
+pub use mock::{IoTestFs, MockIoTestFs as fs};

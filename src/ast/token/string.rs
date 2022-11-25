@@ -27,7 +27,6 @@ fn parse_literal(input: &str) -> IResult<&str, &str> {
     verify(not_quote_slash, |s: &str| !s.is_empty())(input)
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum StringFragment {
     Literal(usize),
     EscapedChar(usize),

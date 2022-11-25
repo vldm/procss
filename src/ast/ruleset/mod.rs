@@ -20,7 +20,9 @@ use nom::IResult;
 
 pub use self::rule::Rule;
 use super::selector::{Selector, SelectorPath};
-use super::token::{comment0, parse_string_literal, parse_symbol, trim_whitespace};
+use super::token::{
+    comment0, parse_string_literal, parse_symbol, trim_whitespace, NeedsWhitespaceStringExt,
+};
 use crate::parser::ParseCss;
 use crate::render::*;
 use crate::transform::TransformCss;
@@ -77,7 +79,10 @@ impl<'a> RenderCss for QualRule<'a> {
         write!(f, "@")?;
         trim_whitespace(self.0, f);
         if let Some(val) = self.1 {
-            write!(f, " ")?;
+            if val.needs_pre_ws() {
+                write!(f, " ")?;
+            }
+
             trim_whitespace(val, f);
         }
 
@@ -98,7 +103,10 @@ impl<'a, T: RenderCss> RenderCss for QualRuleset<'a, T> {
         if !self.1.is_empty() {
             write!(f, "@{}", self.0 .0)?;
             if let Some(val) = self.0 .1 {
-                write!(f, " ")?;
+                if val.needs_pre_ws() {
+                    write!(f, " ")?;
+                }
+
                 trim_whitespace(val, f);
             }
 
@@ -140,7 +148,10 @@ impl<'a, T: RenderCss> RenderCss for QualNestedRuleset<'a, T> {
             let QualNestedRuleset(QualRule(name, val), node) = self;
             write!(f, "@{}", name)?;
             if let Some(val) = val {
-                write!(f, " ")?;
+                if val.needs_pre_ws() {
+                    write!(f, " ")?;
+                }
+
                 trim_whitespace(val, f);
             }
 

@@ -102,17 +102,9 @@ impl<'a> ParseCss<'a> for TreeRuleset<'a> {
                 Ok((input, Ruleset::QualRule(qual_rule)))
             } else {
                 let (input, _) = tuple((tag("{"), sep0))(input)?;
-                if let Ok((input, rules)) = many1(TreeRule::parse::<E>)(input) {
-                    let (input, _) = tuple((comment0, tag("}")))(input)?;
-                    Ok((input, Ruleset::QualRuleset(QualRuleset(qual_rule, rules))))
-                } else {
-                    let (input, rule) = many0(terminated(TreeRuleset::parse::<E>, sep0))(input)?;
-                    let (input, _) = tuple((comment0, tag("}")))(input)?;
-                    Ok((
-                        input,
-                        Ruleset::QualNestedRuleset(QualNestedRuleset(qual_rule, rule)),
-                    ))
-                }
+                let (input, rules) = many1(TreeRule::parse::<E>)(input)?;
+                let (input, _) = tuple((comment0, tag("}")))(input)?;
+                Ok((input, Ruleset::QualRuleset(QualRuleset(qual_rule, rules))))
             }
         } else {
             let (input, selector_ruleset) = SelectorRuleset::parse(input)?;

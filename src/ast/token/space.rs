@@ -17,19 +17,57 @@ use nom::multi::{many0, many1, many_till};
 use nom::sequence::preceded;
 use nom::IResult;
 
+/// An "extension" trait for [`str`] which is used frequently to determine
+/// whether whitepsace can be removed during [`crate::render::RenderCss`]
+pub trait NeedsWhitespaceStringExt {
+    /// Does this string needs a leading whitespace character?
+    fn needs_pre_ws(&self) -> bool;
+
+    /// Does this string needs a trailing whitespace character?
+    fn needs_post_ws(&self) -> bool;
+}
+
+impl NeedsWhitespaceStringExt for str {
+    fn needs_pre_ws(&self) -> bool {
+        self.chars()
+            .next()
+            .map(|x| x.is_ascii_alphanumeric() || x == '-' || x == '_')
+            .unwrap_or_default()
+    }
+
+    fn needs_post_ws(&self) -> bool {
+        self.chars()
+            .last()
+            .map(|x| x.is_ascii_alphanumeric() || x == '-' || x == '_')
+            .unwrap_or_default()
+    }
+}
+
 /// Render `s` trimming all intermediate whitespace to a single character along
 /// the way.
 pub fn trim_whitespace(s: &str, f: &mut std::fmt::Formatter<'_>) {
-    let mut flag = false;
+    let mut last_alpha = false;
     s.split_whitespace().for_each(|w| {
-        if flag {
+        if last_alpha && w.needs_pre_ws() {
             write!(f, " ").unwrap();
         }
 
-        flag = flag || !w.is_empty();
+        last_alpha = w.needs_post_ws();
         write!(f, "{}", w).unwrap();
     });
 }
+
+// pub fn trim_whitespace(s: &str, f: &mut std::fmt::Formatter<'_>) {
+//     let mut flag = false;
+//     s.split_whitespace().for_each(|w| {
+//         if flag {
+//             write!(f, " ").unwrap();
+//         }
+
+//         flag = flag || !w.is_empty();
+//         write!(f, "{}", w).unwrap();
+//     });
+// }
 
 fn parse_comment<'a, E>(input: &'a str) -> IResult<&'a str, (), E>
 where
@@ -108,7 +146,12 @@ mod tests {
     }
 
     #[test]
+    fn test_forward_slash() {
+        assert_matches!(comment0::<()>("// test"), Ok(("", ())))
+    }
+
+    #[test]
     fn test_semicolons() {
-        assert_matches!(comment0::<()>("/* test */"), Ok(("", ())))
+        assert_matches!(comment0::<()>("/* test; test */"), Ok(("", ())))
     }
 }

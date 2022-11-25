@@ -9,28 +9,59 @@
 // │                                                                           │
 // └───────────────────────────────────────────────────────────────────────────┘
 
-use anyhow::anyhow;
-use nom::error::{convert_error, ParseError, VerboseError};
-use nom::{Err, IResult};
+#![feature(assert_matches)]
 
-/// A trait for CSS AST types which can be parsed from a String.
-pub trait ParseCss<'a>
-where
-    Self: Sized,
-{
-    /// Parse an input string into the trait implementor, parameterized by an
-    /// invoker-chosen `E` error type which allows compile-time choice between
-    /// fast or debug parser implementations.
-    fn parse<E>(input: &'a str) -> IResult<&'a str, Self, E>
-    where
-        E: ParseError<&'a str>;
+#[cfg(test)]
+use std::assert_matches::assert_matches;
+use std::collections::HashMap;
+
+use procss::transformers::{apply_import, apply_var};
+use procss::{parse, RenderCss};
+
+#[test]
+fn test_apply_import() {
+    let mut trees = HashMap::default();
+    trees.insert("test", parse("div.closed{color: green}").unwrap());
+    assert_matches!(
+        parse(
+            "
+            @import \"test\";
+            div.open {
+                color: red;
+            }
+        "
+        )
+        .map(|mut x| {
+            apply_import(&trees)(&mut x);
+            x.flatten_tree().as_css_string()
+        })
+        .as_deref(),
+        Ok("div.closed{color:green;}div.open{color:red;}")
+    )
 }
 
-pub fn unwrap_parse_error(input: &str, err: Err<VerboseError<&str>>) -> anyhow::Error {
-    match err {
-        Err::Error(e) | Err::Failure(e) => {
-            anyhow!("Error parsing, unknown:\n{}", convert_error(input, e))
-        }
-        Err::Incomplete(needed) => anyhow!("Error parsing, unexpected input:\n {:?}", needed),
-    }
+#[test]
+fn test_import_ref() {
+    let mut trees = HashMap::default();
+    trees.insert(
+        "test",
+        parse("div.closed{color: ref}@green: #00FF00;").unwrap(),
+    );
+    assert_matches!(
+        parse(
+            "
+            @import url(\"ref://test\");
+            div.open {
+                color: @green;
+            }
+        "
+        )
+        .map(|mut x| {
+            apply_import(&trees)(&mut x);
+            apply_var(&mut x);
+            x.flatten_tree().as_css_string()
+        })
+        .as_deref(),
+        Ok("div.open{color:#00FF00;}")
+    )
 }

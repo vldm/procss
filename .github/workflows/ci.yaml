@@ -9,7 +9,7 @@
 #  │                                                                           │
 #  └───────────────────────────────────────────────────────────────────────────┘
 
-name: Build [DEV]
+name: CI
 
 on:
     push:
@@ -41,8 +41,16 @@ jobs:
             - name: Lint
               run: cargo clippy
 
-            - name: Build
-              run: cargo build
+            # - name: Build
+            #   run: cargo build
+
+            - name: Install grcov
+              run: cargo install grcov
 
             - name: Test
-              run: cargo test --features iotest && cargo test --doc --features iotest
+              run: cargo xtest
+
+            - name: Upload coverage
+              uses: codecov/codecov-action@v3
+              with:
+                files: ./target/coverage/lcov/lcov.info
