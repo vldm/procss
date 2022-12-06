@@ -38,7 +38,7 @@ impl NeedsWhitespaceStringExt for str {
     fn needs_post_ws(&self) -> bool {
         self.chars()
             .last()
-            .map(|x| x.is_ascii_alphanumeric() || x == '-' || x == '_')
+            .map(|x| x.is_ascii_alphanumeric() || x == '-' || x == '_' || x == '%')
             .unwrap_or_default()
     }
 }

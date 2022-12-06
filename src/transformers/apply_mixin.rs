@@ -38,11 +38,9 @@ use crate::ast::*;
 pub fn apply_mixin<'a>(tree: &mut Tree<'a>) {
     let mut mixins: HashMap<&'a str, Vec<TreeRule<'a>>> = HashMap::new();
     tree.transform(|ruleset| {
-        if let Ruleset::QualRuleset(crate::ast::QualRuleset(QualRule(name, val), props)) = ruleset {
+        if let Ruleset::QualRuleset(crate::ast::QualRuleset(QualRule(name, Some(val)), props)) = ruleset {
             if *name == "mixin"  {
-                if let Some(val) = val {
-                    mixins.insert(val.trim(), props.clone());
-                }
+                mixins.insert(val.trim(), props.clone());
             }
         }
 
