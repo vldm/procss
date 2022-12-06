@@ -31,14 +31,14 @@ impl NeedsWhitespaceStringExt for str {
     fn needs_pre_ws(&self) -> bool {
         self.chars()
             .next()
-            .map(|x| x.is_ascii_alphanumeric() || x == '-' || x == '_')
+            .map(|x| x.is_ascii_alphanumeric() || x == '-' || x == '_' || x == '%' || x == '+')
             .unwrap_or_default()
     }
 
     fn needs_post_ws(&self) -> bool {
         self.chars()
             .last()
-            .map(|x| x.is_ascii_alphanumeric() || x == '-' || x == '_' || x == '%')
+            .map(|x| x.is_ascii_alphanumeric() || x == '-' || x == '_' || x == '%' || x == '+')
             .unwrap_or_default()
     }
 }
