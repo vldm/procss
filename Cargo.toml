@@ -1,6 +1,6 @@
 [package]
 name = "procss"
-version = "0.1.5"
+version = "0.1.6"
 edition = "2021"
 authors = ["Andrew Stein <andrew@prospective.dev>"]
 description = "A simple CSS parsing and transformation framework."
@@ -9,9 +9,7 @@ license = "Apache-2.0"
 keywords = ["compiler", "web", "css"]
 
 [workspace]
-members = [
-    "tasks/xtest"
-]
+members = ["tasks/xtest"]
 
 [lib]
 name = "procss"
@@ -40,4 +38,3 @@ mockall = "0.11.3"
 [profile.release]
 lto = true
 codegen-units = 1
-
