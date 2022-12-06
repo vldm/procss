@@ -1,6 +1,6 @@
 # <b>PRO</b><i>CSS</i>
 
-[![CI](https://github.com/ProspectiveCo/procss/actions/workflows/build_dev.yaml/badge.svg)](https://github.com/ProspectiveCo/procss/actions/workflows/build_dev.yaml)
+[![CI](https://github.com/ProspectiveCo/procss/actions/workflows/ci.yaml/badge.svg)](https://github.com/ProspectiveCo/procss/actions/workflows/ci.yaml)
 
 A simple CSS parsing and transformation framework.
 
