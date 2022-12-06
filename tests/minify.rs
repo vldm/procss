@@ -19,9 +19,19 @@ use procss::{parse, RenderCss};
 #[test]
 fn test_minify_percent_followed_by_minus() {
     assert_matches!(
-        parse("div{width:calc(100% -24px)}")
+        parse("div{width:calc(100% - 24px)}")
             .map(|x| x.as_css_string())
             .as_deref(),
-        Ok("div{width:calc(100% -24px);}")
+        Ok("div{width:calc(100% - 24px);}")
+    )
+}
+
+#[test]
+fn test_minify_percent_followed_by_plus() {
+    assert_matches!(
+        parse("div{width:calc(100% + 28px)}")
+            .map(|x| x.as_css_string())
+            .as_deref(),
+        Ok("div{width:calc(100% + 28px);}")
     )
 }
