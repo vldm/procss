@@ -1,15 +1,16 @@
 [package]
-name = "procss-xtest"
+name = "procss-xbuild"
 version = "0.1.0"
 edition = "2021"
 
 [[bin]]
-name = "xtest"
+name = "xbuild"
 path = "main.rs"
 bench = false
 
 [dependencies]
-grcov = { workspace = true }
 once_cell = { workspace = true }
 procss-utils = { path = "../utils" }
 regex = { workspace = true }
+wasm-bindgen-cli = { workspace = true }
+wasm-opt = { workspace = true }

@@ -9,32 +9,36 @@
 // │                                                                           │
 // └───────────────────────────────────────────────────────────────────────────┘
 
-/// This needs to be here or the wasm build will not export any library symbols.
-#[allow(unused_imports)]
-use procss::*;
+#![feature(once_cell)]
 
-#[cfg(not(target_arch = "wasm32"))]
-mod init {
-    use std::path::Path;
-    use std::{env, fs};
+use std::process::{exit, Command};
 
-    use procss::*;
+use once_cell::sync::Lazy;
+use regex::Regex;
 
-    pub fn init() -> anyhow::Result<String> {
-        let args: Vec<String> = env::args().collect();
-        let contents = fs::read_to_string(Path::new(&args[1]));
-        let css = parse(&contents?)?.flatten_tree().as_css_string();
-        Ok(css)
+pub trait SimpleCommand {
+    fn execute(&mut self);
+}
+
+impl SimpleCommand for Command {
+    fn execute(&mut self) {
+        let code = self.status().expect("Failed to execute").code();
+        match code {
+            Some(x) if x == 0 => (),
+            Some(x) => exit(x),
+            None => exit(1),
+        }
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-fn main() {
-    match init::init() {
-        Ok(x) => println!("{}", x),
-        Err(x) => eprintln!("{}", x),
-    }
-}
+static DEFAULT_TARGET: Lazy<String> = Lazy::new(|| {
+    let re = Regex::new(r"(?m)host:\s*(.+?)$").unwrap();
+    let result = Command::new("rustc").args(["-vV"]).output().unwrap();
+    let target = std::str::from_utf8(&result.stdout).unwrap();
+    let target = re.captures_iter(target).next().unwrap()[1].to_owned();
+    target
+});
 
-#[cfg(target_arch = "wasm32")]
-fn main() {}
+pub fn get_default_target() -> &'static str {
+    &DEFAULT_TARGET
+}

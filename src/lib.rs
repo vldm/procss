@@ -69,10 +69,10 @@
 //!
 //! ```no_run
 //! let mut build = procss::BuildCss::new("./src");
-//! build.add("controls/menu.scss");
-//! build.add("logout.scss"); // imports "controls/menu.scss"
-//! build.add("my_app.scss"); // imports "controls/menu.scss" and "logout.scss"
-//! build.compile("./dist").unwrap();
+//! build.add_file("controls/menu.scss");
+//! build.add_file("logout.scss"); // imports "controls/menu.scss"
+//! build.add_file("my_app.scss"); // imports "controls/menu.scss" and "logout.scss"
+//! build.compile().unwrap().write("./dist").unwrap();
 //! ```
 
 #![feature(assert_matches)]
@@ -80,6 +80,8 @@
 
 pub mod ast;
 mod builder;
+#[cfg(target_arch = "wasm32")]
+mod js_builder;
 mod parser;
 mod render;
 mod transform;

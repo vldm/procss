@@ -41,7 +41,7 @@ use crate::transformers;
 /// A non-nested "flat" CSS representation, suitable for browser output. The
 /// [`Css`] AST is typically generated via the
 /// [`crate::ast::Tree::flatten_tree`] method.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Css<'a>(pub Vec<FlatRuleset<'a>>);
 
 impl<'a> Css<'a> {

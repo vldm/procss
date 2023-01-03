@@ -9,32 +9,51 @@
 // │                                                                           │
 // └───────────────────────────────────────────────────────────────────────────┘
 
-/// This needs to be here or the wasm build will not export any library symbols.
-#[allow(unused_imports)]
-use procss::*;
+use std::collections::HashMap;
 
-#[cfg(not(target_arch = "wasm32"))]
-mod init {
-    use std::path::Path;
-    use std::{env, fs};
+use wasm_bindgen::prelude::*;
+use wasm_bindgen::JsValue;
 
-    use procss::*;
+/// An implementation of `BuildCss` which owns its data, suitable for use as an
+/// exported type in JavaScript.
+#[wasm_bindgen]
+pub struct BuildCss {
+    rootdir: String,
+    inputs: HashMap<String, String>,
+}
 
-    pub fn init() -> anyhow::Result<String> {
-        let args: Vec<String> = env::args().collect();
-        let contents = fs::read_to_string(Path::new(&args[1]));
-        let css = parse(&contents?)?.flatten_tree().as_css_string();
-        Ok(css)
+#[wasm_bindgen]
+impl BuildCss {
+    #[wasm_bindgen(constructor)]
+    pub fn new(rootdir: String) -> Self {
+        BuildCss {
+            rootdir,
+            inputs: HashMap::default(),
+        }
+    }
+
+    pub fn add(&mut self, path: String, content: String) {
+        self.inputs.insert(path, content);
+    }
+
+    pub fn compile(&self) -> core::result::Result<JsValue, JsError> {
+        let mut build = crate::builder::BuildCss::new(self.rootdir.clone());
+        for (k, v) in self.inputs.iter() {
+            build.add_content(k, v.clone());
+        }
+
+        Ok(serde_wasm_bindgen::to_value(
+            &build.compile().into_jserr()?.as_strings().into_jserr()?,
+        )?)
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-fn main() {
-    match init::init() {
-        Ok(x) => println!("{}", x),
-        Err(x) => eprintln!("{}", x),
-    }
+trait IntoJsError<T> {
+    fn into_jserr(self) -> Result<T, wasm_bindgen::JsError>;
 }
 
-#[cfg(target_arch = "wasm32")]
-fn main() {}
+impl<T> IntoJsError<T> for Result<T, anyhow::Error> {
+    fn into_jserr(self) -> Result<T, wasm_bindgen::JsError> {
+        self.map_err(|x| JsError::from(x.root_cause()))
+    }
+}

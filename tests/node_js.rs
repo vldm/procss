@@ -9,32 +9,28 @@
 // │                                                                           │
 // └───────────────────────────────────────────────────────────────────────────┘
 
-/// This needs to be here or the wasm build will not export any library symbols.
-#[allow(unused_imports)]
-use procss::*;
+use std::process::Command;
 
-#[cfg(not(target_arch = "wasm32"))]
-mod init {
-    use std::path::Path;
-    use std::{env, fs};
-
-    use procss::*;
-
-    pub fn init() -> anyhow::Result<String> {
-        let args: Vec<String> = env::args().collect();
-        let contents = fs::read_to_string(Path::new(&args[1]));
-        let css = parse(&contents?)?.flatten_tree().as_css_string();
-        Ok(css)
-    }
+const JS_TEST: &str = "
+async function run() {
+    const { BuildCss } = await import(\"@prospective.co/procss/target/cjs/procss.js\");
+    const builder = new BuildCss(\"./virtual\");
+    builder.add(\"test.scss\", \"div { span { color: red }}\");
+    console.log(builder.compile().get(\"test.css\"));
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-fn main() {
-    match init::init() {
-        Ok(x) => println!("{}", x),
-        Err(x) => eprintln!("{}", x),
-    }
-}
+run();
+";
 
-#[cfg(target_arch = "wasm32")]
-fn main() {}
+#[test]
+fn test_apply_import() {
+    let output = Command::new("node")
+        .args(["-e", JS_TEST])
+        .output()
+        .expect("No output");
+
+    assert_eq!(
+        std::str::from_utf8(&output.stdout).unwrap(),
+        "div span{color:red;}\n"
+    );
+}
