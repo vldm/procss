@@ -1,0 +1,12 @@
+[package]
+name = "procss-utils"
+version = "0.1.7"
+edition = "2021"
+
+[lib]
+name = "procss_utils"
+path = "lib.rs"
+
+[dependencies]
+regex = { workspace = true }
+once_cell = { workspace = true }

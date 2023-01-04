@@ -11,13 +11,19 @@ A simple CSS parsing and transformation framework.
 Build
 
 ```bash
-cargo build
+cargo xbuild
 ```
 
 Test
 
 ```bash
 cargo xtest
+```
+
+Test coverage report (disables incremental builds)
+
+```bash
+cargo xtest --coverage
 ```
 
 Lint

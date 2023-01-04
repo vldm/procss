@@ -1,3 +1,7 @@
 [alias]
 xbench = "bench --features iotest"
-xtest = "run -p procss-xtest"
+xtest = "run -p procss-xtest --"
+xbuild = "run -p procss-xbuild --"
+
+[unstable]
+bindeps = true

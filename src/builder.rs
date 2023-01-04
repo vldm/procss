@@ -16,6 +16,7 @@ use anyhow::Context;
 
 use crate::parser::{unwrap_parse_error, ParseCss};
 use crate::render::RenderCss;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::utils::fs;
 #[cfg(feature = "iotest")]
 use crate::utils::IoTestFs;
@@ -23,10 +24,17 @@ use crate::{ast, transformers, utils};
 
 /// A CSS+ project build, comprising a collection of CSS+ files which may
 /// reference eachother (via `@import`).
-pub struct BuildCss {
+pub struct BuildCss<'a> {
     paths: Vec<String>,
-    rootdir: &'static str,
+    contents: HashMap<&'a str, String>,
+    trees: HashMap<&'a str, ast::Tree<'a>>,
+    css: HashMap<&'a str, ast::Css<'a>>,
+    rootdir: String,
 }
+
+/// The compiled output of a [`BuildCss`] collection, obtained from
+/// [`BuildCss::compile`].  
+pub struct CompiledCss<'a>(&'a BuildCss<'a>);
 
 /// An incremental build struct for compiling a project's CSS sources.
 ///
@@ -34,57 +42,92 @@ pub struct BuildCss {
 ///
 /// ```no_run
 /// let mut build = procss::BuildCss::new("./src");
-/// build.add("app.scss");
-/// build.compile("./dist").unwrap();
+/// build.add_file("app.scss");
+/// build.compile().unwrap().write("./dist").unwrap();
 /// ```
-impl BuildCss {
+impl<'a> BuildCss<'a> {
     /// Create a new [`BuildCss`] rooted at `rootdir`.
-    pub fn new(rootdir: &'static str) -> Self {
+    pub fn new<S: Into<String>>(rootdir: S) -> Self {
         Self {
             paths: Default::default(),
-            rootdir,
+            contents: Default::default(),
+            trees: Default::default(),
+            css: Default::default(),
+            rootdir: rootdir.into(),
         }
     }
 
     /// Add a file `path` to this build.
-    pub fn add(&mut self, path: &str) {
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn add_file(&mut self, path: &'a str) {
         self.paths.push(path.to_owned());
+        let inpath = PathBuf::from(&self.rootdir).join(path);
+        let txt = fs::read_to_string(inpath.as_path()).unwrap();
+        self.contents.insert(path, txt);
+    }
+
+    /// Add a file `path` to this build.
+    pub fn add_content(&mut self, path: &'a str, scss: String) {
+        self.paths.push(path.to_owned());
+        self.contents.insert(path, scss);
     }
 
     /// Compile this [`BuildCss`] start-to-finish, applying all transforms along
-    /// the way. Resulting files are written to `outdir`, preserving their paths
-    /// relative to `rootdir` used to construct this [`BuildCss`].
-    pub fn compile(&self, outdir: &'static str) -> anyhow::Result<()> {
-        let mut contents: HashMap<&str, String> = HashMap::default();
-        let mut trees: HashMap<&str, ast::Tree> = HashMap::default();
-        let mut css: HashMap<&str, ast::Css> = HashMap::default();
-        for path in &self.paths {
-            let inpath = PathBuf::from(self.rootdir).join(path);
-            let txt = fs::read_to_string(inpath.as_path())?;
-            contents.insert(path, txt);
-        }
-
-        for (path, contents) in &contents {
+    /// the way.
+    pub fn compile(&'a mut self) -> anyhow::Result<CompiledCss<'a>> {
+        for (path, contents) in &self.contents {
             let tree = ast::Tree::parse(contents);
             let (_, tree) = tree.map_err(|err| unwrap_parse_error(contents, err))?;
-            trees.insert(path, tree);
+            self.trees.insert(path, tree);
         }
 
-        let dep_trees = trees.clone();
-        for (path, tree) in trees.iter_mut() {
+        let dep_trees = self.trees.clone();
+        for (path, tree) in self.trees.iter_mut() {
             transformers::apply_import(&dep_trees)(tree);
             transformers::apply_mixin(tree);
             transformers::apply_var(tree);
-            css.insert(path, tree.flatten_tree());
+            self.css.insert(path, tree.flatten_tree());
         }
 
-        for (path, css) in css.iter_mut() {
-            let outdir = utils::join_paths(self.rootdir, path);
-            transformers::inline_url(&outdir.to_string_lossy())(css);
+        for (path, css) in self.css.iter_mut() {
+            let srcdir = utils::join_paths(&self.rootdir, path);
+            transformers::inline_url(&srcdir.to_string_lossy())(css);
             transformers::dedupe(css);
         }
 
-        for (path, css) in css {
+        Ok(CompiledCss(self))
+    }
+}
+
+impl<'a> CompiledCss<'a> {
+    /// Write this struct's compiled data to `outdir`, preserving the relative
+    /// subdirectory structure of the `input` sources passed to
+    /// [`BuildCss::add`], relative to `outdir`.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn write(self, outdir: &'static str) -> anyhow::Result<()> {
+        for (outfile, css, path) in self.iter_files().flatten() {
+            let outdir = utils::join_paths(outdir, path);
+            fs::create_dir_all(outdir.clone()).unwrap_or_default();
+            fs::write(outdir.join(outfile), css)?;
+        }
+
+        Ok(())
+    }
+
+    /// Render this struct's compiled data in memory as a `String`, preserving
+    /// the relative subdirectory structure of the `input` sources passed to
+    /// [`BuildCss::add`], relative to `outdir`.
+    pub fn as_strings(&self) -> anyhow::Result<HashMap<String, String>> {
+        let mut results = HashMap::default();
+        for (outfile, css, _) in self.iter_files().flatten() {
+            results.insert(outfile, css).unwrap_or_default();
+        }
+
+        Ok(results)
+    }
+
+    fn iter_files(&self) -> impl Iterator<Item = anyhow::Result<(String, String, &'_ str)>> {
+        self.0.css.iter().map(|(path, css)| {
             let outpath = PathBuf::from(path);
             let outfile = format!(
                 "{}.css",
@@ -94,12 +137,8 @@ impl BuildCss {
                     .to_string_lossy()
             );
 
-            let outdir = utils::join_paths(outdir, path);
-            fs::create_dir_all(outdir.clone()).unwrap_or_default();
-            fs::write(outdir.join(outfile), css.as_css_string())?;
-        }
-
-        Ok(())
+            Ok((outfile, css.as_css_string(), *path))
+        })
     }
 }
 
@@ -136,9 +175,9 @@ mod tests {
             Ok(())
         });
 
-        let mut build = BuildCss::new("./src");
-        build.add("app/component.scss");
-        build.compile("./dist").unwrap();
+        let mut build = BuildCss::new("./src".to_owned());
+        build.add_file("app/component.scss");
+        build.compile().unwrap().write("./dist").unwrap();
 
         let outputs = outputs.borrow().clone();
         assert_eq!(outputs, vec!["div .open{color:green;}".to_owned()]);

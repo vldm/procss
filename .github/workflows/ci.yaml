@@ -41,14 +41,11 @@ jobs:
             - name: Lint
               run: cargo clippy
 
-            # - name: Build
-            #   run: cargo build
-
-            - name: Install grcov
-              run: cargo install grcov
+            - name: Build
+              run: cargo xbuild
 
             - name: Test
-              run: cargo xtest
+              run: cargo xtest --coverage
 
             - name: Upload coverage
               uses: codecov/codecov-action@v3
