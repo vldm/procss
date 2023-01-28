@@ -22,25 +22,48 @@ use crate::ast::token::*;
 use crate::parser::*;
 use crate::render::*;
 
+/// pseudo-selectors can be "pseudo-class" or "pseudo-element", and we are only
+/// concerned about the distinction between them in regards to their syntax.
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+pub enum PseudoMode {
+    PseudoClass,
+    PseudoElement,
+}
+
 /// A pseudo-selector component of a `Selector`, including optional argument
 /// selector (parenthesis delimited).
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct Pseudo<'a> {
     property: &'a str,
     value: Option<SelectorTerm<'a, Option<&'a str>>>,
+    mode: PseudoMode,
 }
 
 impl<'a> ParseCss<'a> for Pseudo<'a> {
     fn parse<E: ParseError<&'a str>>(input: &'a str) -> IResult<&'a str, Self, E> {
-        let (input, property) = preceded(tuple((tag(":"), opt(tag(":")))), parse_symbol)(input)?;
+        let (input, mode) = tuple((tag(":"), opt(tag(":"))))(input)?;
+        let (input, property) = parse_symbol(input)?;
         let (input, value) = opt(delimited(tag("("), SelectorTerm::parse, tag(")")))(input)?;
-        Ok((input, Pseudo { property, value }))
+        let mode = mode
+            .1
+            .map(|_| PseudoMode::PseudoElement)
+            .unwrap_or(PseudoMode::PseudoClass);
+
+        Ok((input, Pseudo {
+            property,
+            value,
+            mode,
+        }))
     }
 }
 
 impl<'a> RenderCss for Pseudo<'a> {
     fn render(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, ":{}", self.property)?;
+        match self.mode {
+            PseudoMode::PseudoClass => write!(f, ":{}", self.property)?,
+            PseudoMode::PseudoElement => write!(f, "::{}", self.property)?,
+        };
+
         if let Some(x) = self.value.as_ref() {
             write!(f, "(")?;
             x.render(f)?;
@@ -283,7 +306,7 @@ mod tests {
                 tag: Some("div"),
                 pseudo,
                 ..
-            })) if pseudo.len() == 1 && matches!(pseudo[0], Pseudo{property: "hover", value: None })
+            })) if pseudo.len() == 1 && matches!(pseudo[0], Pseudo{property: "hover", value: None, mode: PseudoMode::PseudoClass })
         )
     }
 
@@ -295,7 +318,7 @@ mod tests {
                 tag: Some("div"),
                 pseudo,
                 ..
-            })) if pseudo.len() == 1 && matches!(pseudo[0], Pseudo{ property: "not", value: Some(_) })
+            })) if pseudo.len() == 1 && matches!(pseudo[0], Pseudo{ property: "not", value: Some(_), mode: PseudoMode::PseudoClass })
         )
     }
 
@@ -307,7 +330,7 @@ mod tests {
                 tag: Some("div"),
                 pseudo,
                 ..
-            })) if pseudo.len() == 1 && matches!(pseudo[0], Pseudo{ property: "nth-child", value: Some(_) })
+            })) if pseudo.len() == 1 && matches!(pseudo[0], Pseudo{ property: "nth-child", value: Some(_), mode: PseudoMode::PseudoClass })
         )
     }
 
@@ -320,6 +343,30 @@ mod tests {
             .map(|x| x.as_css_string())
             .as_deref(),
             Ok("div:nth-child(2)")
+        )
+    }
+
+    #[test]
+    fn test_pesudo_element() {
+        assert_matches!(
+            SelectorTerm::parse::<()>("div::-webkit-scroll-thumb"),
+            Ok(("", SelectorTerm {
+                tag: Some("div"),
+                pseudo,
+                ..
+            })) if pseudo.len() == 1 && matches!(pseudo[0], Pseudo{property: "-webkit-scroll-thumb", value: None, mode: PseudoMode::PseudoElement })
+        )
+    }
+
+    #[test]
+    fn test_pesudo_element_renders_correctly() {
+        assert_matches!(
+            SelectorTerm::<Option<&str>>::parse::<nom::error::VerboseError<&str>>(
+                "div::-webkit-scroll-thumb"
+            )
+            .map(|x| x.as_css_string())
+            .as_deref(),
+            Ok("div::-webkit-scroll-thumb")
         )
     }
 }
