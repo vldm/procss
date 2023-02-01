@@ -72,6 +72,8 @@ mod mock {
         // where
         //     P: AsRef<std::path::Path> + 'static;
 
+        fn read(path: &std::path::Path) -> std::io::Result<Vec<u8>>;
+
         fn create_dir_all<P>(path: P) -> std::io::Result<()>
         where
             P: AsRef<std::path::Path> + 'static;

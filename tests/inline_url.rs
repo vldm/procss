@@ -19,8 +19,9 @@ use procss::{parse, RenderCss};
 
 #[test]
 fn test_inline_url() {
-    let ctx = procss::utils::fs::read_to_string_context();
-    ctx.expect().returning(|_| Ok("abcde".to_owned()));
+    let ctx = procss::utils::fs::read_context();
+    ctx.expect()
+        .returning(|_| Ok("abcde".as_bytes().to_owned()));
 
     assert_matches!(
         parse(
@@ -42,8 +43,9 @@ fn test_inline_url() {
 
 #[test]
 fn test_omit_non_path_inline_url() {
-    let ctx = procss::utils::fs::read_to_string_context();
-    ctx.expect().returning(|_| Ok("abcde".to_owned()));
+    let ctx = procss::utils::fs::read_context();
+    ctx.expect()
+        .returning(|_| Ok("abcde".as_bytes().to_owned()));
 
     assert_matches!(
         parse(
