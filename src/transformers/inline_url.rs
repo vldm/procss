@@ -28,7 +28,7 @@ fn parse_url(input: &str) -> nom::IResult<&str, &str> {
 }
 
 fn into_data_uri<'a>(path: &Path) -> Cow<'a, str> {
-    let contents = fs::read_to_string(path).expect("Error reading file");
+    let contents = fs::read(path).expect("Error reading file");
     let encoded = base64::encode(contents);
     let fff = path.extension().unwrap_or_default().to_string_lossy();
     let fmt = match fff.as_ref() {
