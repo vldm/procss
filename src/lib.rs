@@ -86,7 +86,11 @@ mod parser;
 mod render;
 mod transform;
 pub mod transformers;
-mod utils;
+#[cfg(feature = "iotest")]
+pub mod utils;
+
+#[cfg(not(feature = "iotest"))]
+pub mod utils;
 
 use self::ast::Tree;
 pub use self::builder::BuildCss;
