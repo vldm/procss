@@ -14,6 +14,7 @@
 #[cfg(test)]
 use std::assert_matches::assert_matches;
 use std::collections::HashMap;
+use std::path::Path;
 
 use procss::transformers::{apply_import, apply_var};
 use procss::{parse, RenderCss};
@@ -21,7 +22,10 @@ use procss::{parse, RenderCss};
 #[test]
 fn test_apply_import() {
     let mut trees = HashMap::default();
-    trees.insert("test", parse("div.closed{color: green}").unwrap());
+    trees.insert(
+        Path::new("test"),
+        parse("div.closed{color: green}").unwrap(),
+    );
     assert_matches!(
         parse(
             "
@@ -44,7 +48,7 @@ fn test_apply_import() {
 fn test_import_ref() {
     let mut trees = HashMap::default();
     trees.insert(
-        "test",
+        Path::new("test"),
         parse("div.closed{color: ref}@green: #00FF00;").unwrap(),
     );
     assert_matches!(

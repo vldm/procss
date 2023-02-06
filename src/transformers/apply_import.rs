@@ -10,12 +10,13 @@
 // └───────────────────────────────────────────────────────────────────────────┘
 
 use std::collections::HashMap;
+use std::path::Path;
 
 use super::filter_refs;
 use crate::ast::Ruleset::{self};
 use crate::ast::*;
 
-pub fn apply_import<'a, 'b>(assets: &'b HashMap<&str, Tree<'a>>) -> impl Fn(&mut Tree<'a>) + 'b {
+pub fn apply_import<'a, 'b>(assets: &'b HashMap<&Path, Tree<'a>>) -> impl Fn(&mut Tree<'a>) + 'b {
     |tree| {
         tree.transform(|ruleset| {
             let mut replace = None;
@@ -23,15 +24,17 @@ pub fn apply_import<'a, 'b>(assets: &'b HashMap<&str, Tree<'a>>) -> impl Fn(&mut
                 if *name == "import" {
                     if let Some(val) = val {
                         if val.starts_with('\"') {
-                            replace = assets.get(&val[1..val.len() - 1]).cloned();
+                            replace = assets.get(Path::new(&val[1..val.len() - 1])).cloned();
                             if replace.is_none() {
                                 panic!("File not found: '{}'", &val[1..val.len() - 1])
                             }
                         } else if val.starts_with("url(\"ref://") {
-                            replace = assets.get(&val[11..val.len() - 2]).cloned().map(|mut x| {
-                                filter_refs(&mut x);
-                                x
-                            });
+                            replace = assets.get(Path::new(&val[11..val.len() - 2])).cloned().map(
+                                |mut x| {
+                                    filter_refs(&mut x);
+                                    x
+                                },
+                            );
 
                             if replace.is_none() {
                                 panic!("File not found: '{}'", &val[1..val.len() - 1])
