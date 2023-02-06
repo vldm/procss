@@ -15,14 +15,13 @@ use procss::*;
 
 #[cfg(not(target_arch = "wasm32"))]
 mod init {
-    use std::path::Path;
     use std::{env, fs};
 
     use procss::*;
 
     pub fn init() -> anyhow::Result<String> {
         let args: Vec<String> = env::args().collect();
-        let contents = fs::read_to_string(Path::new(&args[1]));
+        let contents = fs::read_to_string(&args[1]);
         let css = parse(&contents?)?.flatten_tree().as_css_string();
         Ok(css)
     }

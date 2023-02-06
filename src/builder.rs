@@ -10,7 +10,7 @@
 // └───────────────────────────────────────────────────────────────────────────┘
 
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use anyhow::Context;
 
@@ -25,15 +25,15 @@ use crate::{ast, transformers, utils};
 /// A CSS+ project build, comprising a collection of CSS+ files which may
 /// reference eachother (via `@import`).
 pub struct BuildCss<'a> {
-    paths: Vec<String>,
-    contents: HashMap<&'a str, String>,
-    trees: HashMap<&'a str, ast::Tree<'a>>,
-    css: HashMap<&'a str, ast::Css<'a>>,
-    rootdir: String,
+    paths: Vec<PathBuf>,
+    contents: HashMap<&'a Path, String>,
+    trees: HashMap<&'a Path, ast::Tree<'a>>,
+    css: HashMap<&'a Path, ast::Css<'a>>,
+    rootdir: PathBuf,
 }
 
 /// The compiled output of a [`BuildCss`] collection, obtained from
-/// [`BuildCss::compile`].  
+/// [`BuildCss::compile`].
 pub struct CompiledCss<'a>(&'a BuildCss<'a>);
 
 /// An incremental build struct for compiling a project's CSS sources.
@@ -47,7 +47,7 @@ pub struct CompiledCss<'a>(&'a BuildCss<'a>);
 /// ```
 impl<'a> BuildCss<'a> {
     /// Create a new [`BuildCss`] rooted at `rootdir`.
-    pub fn new<S: Into<String>>(rootdir: S) -> Self {
+    pub fn new<P: Into<PathBuf>>(rootdir: P) -> Self {
         Self {
             paths: Default::default(),
             contents: Default::default(),
@@ -59,17 +59,17 @@ impl<'a> BuildCss<'a> {
 
     /// Add a file `path` to this build.
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn add_file(&mut self, path: &'a str) {
-        self.paths.push(path.to_owned());
-        let inpath = PathBuf::from(&self.rootdir).join(path);
-        let txt = fs::read_to_string(inpath.as_path()).unwrap();
-        self.contents.insert(path, txt);
+    pub fn add_file<P: ?Sized + AsRef<Path>>(&mut self, path: &'a P) {
+        self.paths.push(path.as_ref().into());
+        let inpath = self.rootdir.join(path);
+        let txt = fs::read_to_string(&inpath).unwrap();
+        self.contents.insert(path.as_ref(), txt);
     }
 
     /// Add a file `path` to this build.
-    pub fn add_content(&mut self, path: &'a str, scss: String) {
-        self.paths.push(path.to_owned());
-        self.contents.insert(path, scss);
+    pub fn add_content<P: ?Sized + AsRef<Path>>(&mut self, path: &'a P, scss: String) {
+        self.paths.push(path.as_ref().into());
+        self.contents.insert(path.as_ref(), scss);
     }
 
     /// Compile this [`BuildCss`] start-to-finish, applying all transforms along
@@ -104,9 +104,9 @@ impl<'a> CompiledCss<'a> {
     /// subdirectory structure of the `input` sources passed to
     /// [`BuildCss::add`], relative to `outdir`.
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn write(self, outdir: &'static str) -> anyhow::Result<()> {
+    pub fn write<P: AsRef<Path>>(self, outdir: P) -> anyhow::Result<()> {
         for (outfile, css, path) in self.iter_files().flatten() {
-            let outdir = utils::join_paths(outdir, path);
+            let outdir = utils::join_paths(outdir.as_ref(), path);
             fs::create_dir_all(outdir.clone()).unwrap_or_default();
             fs::write(outdir.join(outfile), css)?;
         }
@@ -126,7 +126,7 @@ impl<'a> CompiledCss<'a> {
         Ok(results)
     }
 
-    fn iter_files(&self) -> impl Iterator<Item = anyhow::Result<(String, String, &'_ str)>> {
+    fn iter_files(&self) -> impl Iterator<Item = anyhow::Result<(String, String, &'_ Path)>> {
         self.0.css.iter().map(|(path, css)| {
             let outpath = PathBuf::from(path);
             let outfile = format!(

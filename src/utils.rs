@@ -9,8 +9,6 @@
 // │                                                                           │
 // └───────────────────────────────────────────────────────────────────────────┘
 
-use std::path::PathBuf;
-
 use crate::render::RenderCss;
 
 /// A wrapper around [`Vec`] which guarantees at least `N` elements.
@@ -56,8 +54,8 @@ impl<T: RenderCss, const N: usize> RenderCss for MinVec<T, N> {
 /// to the latter and join with the former.  If the latter path is not relative,
 /// return the former.  Useful for moving directory trees while retaining their
 /// relative structure to some root.
-pub fn join_paths(outdir: &str, path: &str) -> PathBuf {
-    if let Some(parent) = PathBuf::from(path).parent() {
+pub fn join_paths(outdir: &Path, path: &Path) -> PathBuf {
+    if let Some(parent) = path.parent() {
         PathBuf::from(outdir).join(parent)
     } else {
         PathBuf::from(outdir)
@@ -87,6 +85,7 @@ mod mock {
 
 #[cfg(not(feature = "iotest"))]
 pub use std::fs;
+use std::path::{Path, PathBuf};
 
 #[cfg(feature = "iotest")]
 pub use mock::{IoTestFs, MockIoTestFs as fs};
