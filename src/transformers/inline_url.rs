@@ -27,15 +27,20 @@ fn parse_url(input: &str) -> nom::IResult<&str, &str> {
     alt((quoted, unquoted))(input)
 }
 
-fn into_data_uri<'a>(path: &Path) -> Cow<'a, str> {
-    let contents = fs::read(path).expect("Error reading file");
+fn into_data_uri<'a>(path: &Path) -> Option<Cow<'a, str>> {
+    if path.starts_with("data:") {
+        return None;
+    }
+
+    let contents = fs::read(path).ok()?;
     let encoded = base64::encode(contents);
     let fff = path.extension().unwrap_or_default().to_string_lossy();
     let fmt = match fff.as_ref() {
         "png" => "png",
         _ => "svg+xml",
     };
-    format!("url(\"data:image/{};base64,{}\")", fmt, encoded).into()
+
+    Some(format!("url(\"data:image/{};base64,{}\")", fmt, encoded).into())
 }
 
 fn inline_url_impl<'a>(newpath: &str, flat: &mut Css<'a>) {
@@ -46,7 +51,9 @@ fn inline_url_impl<'a>(newpath: &str, flat: &mut Css<'a>) {
 
         if let Some(path) = &path {
             if path.starts_with(".") || path.starts_with("/") {
-                rule.value = into_data_uri(path);
+                if let Some(value) = into_data_uri(path) {
+                    rule.value = value;
+                }
             }
         }
     })
