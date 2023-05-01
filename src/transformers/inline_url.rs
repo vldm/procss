@@ -21,6 +21,23 @@ use crate::utils::fs;
 #[cfg(feature = "iotest")]
 use crate::utils::IoTestFs;
 
+#[cfg(not(target_arch = "wasm32"))]
+fn read_file_sync(path: &Path) -> Option<Vec<u8>> {
+    fs::read(path).ok()
+}
+
+#[cfg(target_arch = "wasm32")]
+fn read_file_sync(path: &Path) -> Option<Vec<u8>> {
+    use wasm_bindgen::prelude::*;
+    #[wasm_bindgen(module = "fs")]
+    extern "C" {
+        #[wasm_bindgen(catch)]
+        fn readFileSync(path: &str) -> Result<Vec<u8>, JsValue>;
+    }
+
+    readFileSync(&*path.to_string_lossy()).ok()
+}
+
 fn parse_url(input: &str) -> nom::IResult<&str, &str> {
     let unquoted = delimited(tag("url("), is_not(")"), tag(")"));
     let quoted = delimited(tag("url(\""), is_not("\""), tag("\")"));
@@ -32,7 +49,7 @@ fn into_data_uri<'a>(path: &Path) -> Option<Cow<'a, str>> {
         return None;
     }
 
-    let contents = fs::read(path).ok()?;
+    let contents = read_file_sync(path)?;
     let encoded = base64::encode(contents);
     let fff = path.extension().unwrap_or_default().to_string_lossy();
     let fmt = match fff.as_ref() {
