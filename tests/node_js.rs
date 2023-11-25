@@ -23,7 +23,7 @@ run();
 ";
 
 #[test]
-fn test_apply_import() {
+fn test_apply_import_js() {
     let output = Command::new("node")
         .args(["-e", JS_TEST])
         .output()

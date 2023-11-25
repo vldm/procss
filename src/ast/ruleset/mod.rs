@@ -11,21 +11,24 @@
 
 mod rule;
 
-use nom::branch::alt;
-use nom::bytes::complete::{is_not, tag};
-use nom::combinator::recognize;
-use nom::error::ParseError;
-use nom::multi::many0;
-use nom::IResult;
+use winnow::{
+    // branch::alt,
+    combinator::{alt, repeat},
+    error::ParserError,
+    token::{tag, take_till1},
+    // multi::many0,
+    IResult,
+    Parser,
+};
 
 pub use self::rule::Rule;
-use super::selector::{Selector, SelectorPath};
-use super::token::{
-    comment0, parse_string_literal, parse_symbol, trim_whitespace, NeedsWhitespaceStringExt,
+use super::{
+    selector::{Selector, SelectorPath},
+    token::{
+        comment0, parse_string_literal, parse_symbol, trim_whitespace, NeedsWhitespaceStringExt,
+    },
 };
-use crate::parser::ParseCss;
-use crate::render::*;
-use crate::transform::TransformCss;
+use crate::{parser::ParseCss, render::*, transform::TransformCss};
 
 /// ```css
 /// div {
@@ -57,12 +60,16 @@ impl<'a> TransformCss<SelectorPath<'a>> for SelectorRuleset<'a, Rule<'a>> {
 pub struct QualRule<'a>(pub &'a str, pub Option<&'a str>);
 
 impl<'a> ParseCss<'a> for QualRule<'a> {
-    fn parse<E: ParseError<&'a str>>(input: &'a str) -> IResult<&'a str, Self, E> {
-        let (input, _) = tag("@")(input)?;
-        let (input, tagname) = parse_symbol(input)?;
-        let (input, _) = comment0(input)?;
-        let (input, property) =
-            recognize(many0(alt((is_not("\";{}"), parse_string_literal()))))(input)?;
+    fn parse<E: ParserError<&'a str>>(input: &'a str) -> IResult<&'a str, Self, E> {
+        let (input, _) = tag("@").parse_peek(input)?;
+        let (input, tagname) = parse_symbol.parse_peek(input)?;
+        let (input, _) = comment0.parse_peek(input)?;
+        let (input, property) = repeat::<_, _, Vec<_>, _, _>(
+            0..,
+            alt((take_till1(('\"', ';', '{', '}')), parse_string_literal())),
+        )
+        .recognize()
+        .parse_peek(input)?;
 
         let property = if property.is_empty() {
             None

@@ -9,17 +9,20 @@
 // │                                                                           │
 // └───────────────────────────────────────────────────────────────────────────┘
 
-use std::borrow::Cow;
-use std::path::Path;
+use std::{borrow::Cow, path::Path};
 
-use nom::branch::alt;
-use nom::bytes::complete::{is_not, tag};
-use nom::sequence::delimited;
+use winnow::{
+    combinator::{alt, delimited},
+    token::{tag, take_till1},
+    Parser,
+};
 
-use crate::ast::{Css, Rule};
-use crate::utils::fs;
 #[cfg(feature = "iotest")]
 use crate::utils::IoTestFs;
+use crate::{
+    ast::{Css, Rule},
+    utils::fs,
+};
 
 #[cfg(not(target_arch = "wasm32"))]
 fn read_file_sync(path: &Path) -> Option<Vec<u8>> {
@@ -38,10 +41,10 @@ fn read_file_sync(path: &Path) -> Option<Vec<u8>> {
     readFileSync(&*path.to_string_lossy()).ok()
 }
 
-fn parse_url(input: &str) -> nom::IResult<&str, &str> {
-    let unquoted = delimited(tag("url("), is_not(")"), tag(")"));
-    let quoted = delimited(tag("url(\""), is_not("\""), tag("\")"));
-    alt((quoted, unquoted))(input)
+fn parse_url(input: &str) -> winnow::IResult<&str, &str> {
+    let unquoted = delimited(tag("url("), take_till1(')'), tag(")"));
+    let quoted = delimited(tag("url(\""), take_till1('\"'), tag("\")"));
+    alt((quoted, unquoted)).parse_peek(input)
 }
 
 fn into_data_uri<'a>(path: &Path) -> Option<Cow<'a, str>> {

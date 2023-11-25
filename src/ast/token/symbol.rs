@@ -9,24 +9,22 @@
 // │                                                                           │
 // └───────────────────────────────────────────────────────────────────────────┘
 
-use nom::branch::alt;
-use nom::bytes::complete::tag;
-use nom::character::complete::alphanumeric1;
-use nom::combinator::recognize;
-use nom::error::ParseError;
-use nom::multi::many1;
-use nom::IResult;
+use winnow::{
+    ascii::alphanumeric1,
+    combinator::{alt, repeat},
+    error::ParserError,
+    token::tag,
+    PResult, Parser,
+};
 
-pub fn parse_symbol<'a, E>(input: &'a str) -> IResult<&'a str, &'a str, E>
+pub fn parse_symbol<'a, E>(input: &mut &'a str) -> PResult<&'a str, E>
 where
-    E: ParseError<&'a str>,
+    E: ParserError<&'a str>,
 {
-    let mut parser = recognize(many1(alt((
-        alphanumeric1,
-        tag("-"),
-        tag("_"),
-        tag("*"),
-        tag("%"),
-    ))));
-    parser(input)
+    let mut parser = repeat::<_, _, Vec<_>, _, _>(
+        1..,
+        alt((alphanumeric1, tag("-"), tag("_"), tag("*"), tag("%"))),
+    )
+    .recognize();
+    parser.parse_next(input)
 }

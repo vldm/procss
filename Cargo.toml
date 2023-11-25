@@ -26,16 +26,19 @@ name = "basic"
 harness = false
 
 [features]
-iotest = []
+iotest = ["dep:mockall"]
 
 [dev-dependencies]
 criterion = { version = "0.4", features = ["html_reports"] }
 
 [dependencies]
-nom = "7.1.1"
+# specify version of proc-macro2 (used in mockall)
+proc-macro2 = { version = "=1.0.69" }
+winnow = "0.5"
+# nom = "7.1.1"
 anyhow = "1.0.56"
 base64 = "0.13.1"
-mockall = "0.11.3"
+mockall = { version = "0.11.4", optional = true }
 
 [workspace.dependencies]
 grcov = { version = "0.8.13", artifact = "bin" }

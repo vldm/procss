@@ -16,20 +16,19 @@ mod selector_term;
 
 use std::ops::Deref;
 
-use nom::bytes::complete::tag;
-use nom::error::ParseError;
-use nom::multi::many0;
-use nom::sequence::{delimited, preceded};
-use nom::IResult;
+use winnow::{
+    combinator::{delimited, preceded, repeat},
+    error::ParserError,
+    token::tag,
+    unpeek, IResult, Parser,
+};
 
-pub use self::attribute::SelectorAttr;
-pub use self::combinator::Combinator;
-pub use self::selector_path::SelectorPath;
-pub use self::selector_term::SelectorTerm;
+pub use self::{
+    attribute::SelectorAttr, combinator::Combinator, selector_path::SelectorPath,
+    selector_term::SelectorTerm,
+};
 use super::token::comment0;
-use crate::parser::*;
-use crate::transform::TransformCss;
-use crate::utils::*;
+use crate::{parser::*, transform::TransformCss, utils::*};
 
 /// A set of selector alternatives separated by `,`, for example `div, span`.
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
@@ -62,13 +61,17 @@ impl<'a> Deref for Selector<'a> {
 impl<'a> ParseCss<'a> for Selector<'a> {
     fn parse<E>(input: &'a str) -> IResult<&'a str, Self, E>
     where
-        E: ParseError<&'a str>,
+        E: ParserError<&'a str>,
     {
         let (input, selector) = SelectorPath::parse(input)?;
-        let (input, extra) = many0(preceded(
-            delimited(comment0, tag(","), comment0),
-            SelectorPath::parse,
-        ))(input)?;
+        let (input, extra) = repeat(
+            0..,
+            preceded(
+                delimited(comment0, tag(","), comment0),
+                unpeek(SelectorPath::parse),
+            ),
+        )
+        .parse_peek(input)?;
 
         Ok((input, Selector(MinVec::new([selector], extra))))
     }

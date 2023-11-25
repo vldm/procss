@@ -9,13 +9,20 @@
 // │                                                                           │
 // └───────────────────────────────────────────────────────────────────────────┘
 
-use nom::branch::alt;
-use nom::bytes::complete::{is_not, tag};
-use nom::character::complete::{anychar, multispace1};
-use nom::error::ParseError;
-use nom::multi::{many0, many1, many_till};
-use nom::sequence::preceded;
-use nom::IResult;
+use winnow::{
+    ascii::multispace1,
+    // branch::alt,
+    // bytes::complete::{is_not, tag},
+    // character::complete::{anychar, multispace1},
+    combinator::{alt, not, preceded, repeat, repeat_till0},
+    error::ParserError,
+    // multi::{many0, many1, many_till},
+    // sequence::preceded,
+    token::{any, tag, take_till1},
+    IResult,
+    PResult,
+    Parser,
+};
 
 /// An "extension" trait for [`str`] which is used frequently to determine
 /// whether whitepsace can be removed during [`crate::render::RenderCss`]
@@ -69,61 +76,74 @@ pub fn trim_whitespace(s: &str, f: &mut std::fmt::Formatter<'_>) {
 //     });
 // }
 
-fn parse_comment<'a, E>(input: &'a str) -> IResult<&'a str, (), E>
+fn parse_comment<'a, E>(input: &mut &'a str) -> PResult<(), E>
 where
-    E: ParseError<&'a str>,
+    E: ParserError<&'a str>,
 {
-    ignore(preceded(tag("//"), many0(is_not("\r\n"))))(input)
+    ignore(preceded(
+        tag("//"),
+        repeat::<_, _, Vec<_>, _, _>(0.., take_till1(('\r', '\n'))),
+    ))
+    .parse_next(input)
 }
 
-fn parse_multi_comment<'a, E>(input: &'a str) -> IResult<&'a str, (), E>
+fn parse_multi_comment<'a, E>(input: &mut &'a str) -> PResult<(), E>
 where
-    E: ParseError<&'a str>,
+    E: ParserError<&'a str>,
 {
-    ignore(preceded(tag("/*"), many_till(anychar, tag("*/"))))(input)
+    ignore(preceded(
+        tag("/*"),
+        repeat_till0::<_, _, Vec<_>, _, _, _, _>(any, tag("*/")),
+    ))
+    .parse_next(input)
 }
 
-fn ignore<'a, T, E, F>(mut f: F) -> impl FnMut(&'a str) -> IResult<&'a str, (), E>
+fn ignore<'a, T, E, F>(mut f: F) -> impl Parser<&'a str, (), E>
 where
-    F: FnMut(&'a str) -> IResult<&'a str, T, E>,
+    // F: FnMut(&mut &'a str) -> PResult<T, E>,
+    F: Parser<&'a str, T, E>,
 {
-    move |input| {
-        let (input, _) = f(input)?;
-        Ok((input, ()))
+    move |input: &mut &'a str| {
+        let _ = f.parse_next(input)?;
+        Ok(())
     }
 }
 
 /// Parses 0 or more whitespace characters, including comments.
-pub fn comment0<'a, E>(input: &'a str) -> IResult<&'a str, (), E>
+pub fn comment0<'a, E>(input: &mut &'a str) -> PResult<(), E>
 where
-    E: ParseError<&'a str>,
+    E: ParserError<&'a str>,
 {
-    let (input, _) = many0(alt((
-        ignore(multispace1),
-        parse_comment,
-        parse_multi_comment,
-    )))(input)?;
-    Ok((input, ()))
+    repeat(
+        0..,
+        alt((ignore(multispace1), parse_comment, parse_multi_comment)),
+    )
+    .parse_next(input)?;
+    Ok(())
 }
 
 /// Parses 1 or more whitespace characters, including comments.
-pub fn comment1<'a, E>(input: &'a str) -> IResult<&'_ str, (), E>
+pub fn comment1<'a, E>(input: &mut &'a str) -> PResult<(), E>
 where
-    E: ParseError<&'a str>,
+    E: ParserError<&'a str>,
 {
-    ignore(many1(alt((
-        ignore(multispace1),
-        parse_comment,
-        parse_multi_comment,
-    ))))(input)
+    ignore(repeat::<_, _, Vec<_>, _, _>(
+        1..,
+        alt((ignore(multispace1), parse_comment, parse_multi_comment)),
+    ))
+    .parse_next(input)
 }
 
 /// Parses 0 or more whitespace characters, including comments and semicolons.
-pub fn sep0<'a, E>(input: &'a str) -> IResult<&'_ str, (), E>
+pub fn sep0<'a, E>(input: &mut &'a str) -> PResult<(), E>
 where
-    E: ParseError<&'a str>,
+    E: ParserError<&'a str>,
 {
-    ignore(many0(alt((comment1, ignore(tag(";"))))))(input)
+    ignore(repeat::<_, _, Vec<_>, _, _>(
+        0..,
+        alt((comment1, ignore(tag(";")))),
+    ))
+    .parse_next(input)
 }
 
 #[cfg(test)]
@@ -135,7 +155,7 @@ mod tests {
     #[test]
     fn test_multiline_comment() {
         assert_matches!(
-            comment0::<()>(
+            comment0::<()>.parse_peek(
                 "
     /* 
      * test
@@ -147,11 +167,11 @@ mod tests {
 
     #[test]
     fn test_forward_slash() {
-        assert_matches!(comment0::<()>("// test"), Ok(("", ())))
+        assert_matches!(comment0::<()>.parse_peek("// test"), Ok(("", ())))
     }
 
     #[test]
     fn test_semicolons() {
-        assert_matches!(comment0::<()>("/* test; test */"), Ok(("", ())))
+        assert_matches!(comment0::<()>.parse_peek("/* test; test */"), Ok(("", ())))
     }
 }

@@ -22,21 +22,19 @@ mod tree_ruleset;
 
 use std::cmp::Ordering;
 
-use nom::branch::alt;
-use nom::combinator::eof;
-use nom::error::ParseError;
-use nom::multi::many1;
-use nom::sequence::terminated;
-use nom::{IResult, Parser};
+use winnow::{
+    combinator::{alt, eof, repeat, terminated},
+    error::ParserError,
+    unpeek, IResult, Parser,
+};
 
-pub use self::flat_ruleset::FlatRuleset;
-pub use self::ruleset::{QualNestedRuleset, QualRule, QualRuleset, Rule, Ruleset, SelectorRuleset};
-pub use self::selector::{Combinator, Selector, SelectorAttr, SelectorPath, SelectorTerm};
-pub use self::tree_ruleset::{TreeRule, TreeRuleset};
-use crate::parser::*;
-use crate::render::*;
-use crate::transform::*;
-use crate::transformers;
+pub use self::{
+    flat_ruleset::FlatRuleset,
+    ruleset::{QualNestedRuleset, QualRule, QualRuleset, Rule, Ruleset, SelectorRuleset},
+    selector::{Combinator, Selector, SelectorAttr, SelectorPath, SelectorTerm},
+    tree_ruleset::{TreeRule, TreeRuleset},
+};
+use crate::{parser::*, render::*, transform::*, transformers};
 
 /// A non-nested "flat" CSS representation, suitable for browser output. The
 /// [`Css`] AST is typically generated via the
@@ -193,13 +191,17 @@ impl<'a> TransformCss<Vec<TreeRuleset<'a>>> for Tree<'a> {
 impl<'a> ParseCss<'a> for Tree<'a> {
     fn parse<E>(input: &'a str) -> IResult<&'a str, Self, E>
     where
-        E: ParseError<&'a str>,
+        E: ParserError<&'a str>,
     {
-        let (input, _) = token::sep0(input)?;
+        let (input, _) = token::sep0.parse_peek(input)?;
         let (input, x) = alt((
             eof.map(|_| vec![]),
-            terminated(many1(terminated(TreeRuleset::parse, token::sep0)), eof),
-        ))(input)?;
+            terminated(
+                repeat(1.., terminated(unpeek(TreeRuleset::parse), token::sep0)),
+                eof,
+            ),
+        ))
+        .parse_peek(input)?;
 
         Ok((input, Tree(x)))
     }

@@ -10,8 +10,10 @@
 // └───────────────────────────────────────────────────────────────────────────┘
 
 use anyhow::anyhow;
-use nom::error::{convert_error, ParseError, VerboseError};
-use nom::{Err, IResult};
+use winnow::{
+    error::{ErrMode, ParserError, VerboseError},
+    IResult,
+};
 
 /// A trait for CSS AST types which can be parsed from a String.
 pub trait ParseCss<'a>
@@ -23,14 +25,14 @@ where
     /// fast or debug parser implementations.
     fn parse<E>(input: &'a str) -> IResult<&'a str, Self, E>
     where
-        E: ParseError<&'a str>;
+        E: ParserError<&'a str>;
 }
 
-pub fn unwrap_parse_error(input: &str, err: Err<VerboseError<&str>>) -> anyhow::Error {
+pub fn unwrap_parse_error(input: &str, err: ErrMode<VerboseError<&str>>) -> anyhow::Error {
     match err {
-        Err::Error(e) | Err::Failure(e) => {
-            anyhow!("Error parsing, unknown:\n{}", convert_error(input, e))
+        ErrMode::Backtrack(e) | ErrMode::Cut(e) => {
+            anyhow!("Error parsing, unknown:\n{}", e)
         }
-        Err::Incomplete(needed) => anyhow!("Error parsing, unexpected input:\n {:?}", needed),
+        ErrMode::Incomplete(needed) => anyhow!("Error parsing, unexpected input:\n {:?}", needed),
     }
 }

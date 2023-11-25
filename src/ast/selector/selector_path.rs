@@ -9,16 +9,14 @@
 // │                                                                           │
 // └───────────────────────────────────────────────────────────────────────────┘
 
-use nom::branch::alt;
-use nom::error::ParseError;
-use nom::multi::many0;
-use nom::sequence::tuple;
-use nom::IResult;
+use winnow::{
+    combinator::{alt, repeat},
+    error::ParserError,
+    unpeek, IResult, Parser,
+};
 
-use super::combinator::*;
-use super::selector_term::*;
-use crate::parser::*;
-use crate::render::*;
+use super::{combinator::*, selector_term::*};
+use crate::{parser::*, render::*};
 
 /// A linked-list-like data structure representing CSS selector lists, which are
 /// selectors separated by combinators like `>`, `+` or most commonly just
@@ -129,9 +127,13 @@ impl<'a> RenderCss for SelectorPath<'a> {
 impl<'a> ParseCss<'a> for SelectorPath<'a> {
     fn parse<E>(input: &'a str) -> IResult<&'a str, Self, E>
     where
-        E: ParseError<&'a str>,
+        E: ParserError<&'a str>,
     {
-        alt((parse_selector_self_list, parse_selector_list))(input)
+        alt((
+            unpeek(parse_selector_self_list),
+            unpeek(parse_selector_list),
+        ))
+        .parse_peek(input)
     }
 }
 
@@ -139,10 +141,14 @@ impl<'a> ParseCss<'a> for SelectorPath<'a> {
 /// `parse_selector_self_list`.
 fn parse_selector_list<'a, E>(input: &'a str) -> IResult<&'a str, SelectorPath<'a>, E>
 where
-    E: ParseError<&'a str>,
+    E: ParserError<&'a str>,
 {
     let (rest, x) = SelectorTerm::parse(input)?;
-    let (rest, combinators) = many0(tuple((Combinator::parse, SelectorTerm::parse)))(rest)?;
+    let (rest, combinators) = repeat(
+        0..,
+        (unpeek(Combinator::parse), unpeek(SelectorTerm::parse)),
+    )
+    .parse_peek(rest)?;
     Ok((rest, Cons(x, combinators)))
 }
 
@@ -152,10 +158,14 @@ where
 /// argument to the `PartialCons` variant constructor.
 fn parse_selector_self_list<'a, E>(input: &'a str) -> IResult<&'a str, SelectorPath<'a>, E>
 where
-    E: ParseError<&'a str>,
+    E: ParserError<&'a str>,
 {
     let (rest, x) = SelectorTerm::parse(input)?;
-    let (rest, combinators) = many0(tuple((Combinator::parse, SelectorTerm::parse)))(rest)?;
+    let (rest, combinators) = repeat(
+        0..,
+        (unpeek(Combinator::parse), unpeek(SelectorTerm::parse)),
+    )
+    .parse_peek(rest)?;
     Ok((rest, PartialCons(x, combinators)))
 }
 

@@ -9,14 +9,14 @@
 // │                                                                           │
 // └───────────────────────────────────────────────────────────────────────────┘
 
-use nom::bytes::complete::{is_not, tag};
-use nom::combinator::opt;
-use nom::error::ParseError;
-use nom::sequence::{preceded, tuple};
-use nom::IResult;
+use winnow::{
+    combinator::{not, opt, preceded},
+    error::ParserError,
+    token::{tag, take_till1},
+    IResult, Parser,
+};
 
-use crate::ast::token::*;
-use crate::parser::*;
+use crate::{ast::token::*, parser::*};
 
 /// A selector which matches attributes, optionally against their value as well.
 /// TODO doesn't support comma-separated multiple selectors.
@@ -36,14 +36,15 @@ pub struct SelectorAttr<'a> {
 impl<'a> ParseCss<'a> for SelectorAttr<'a> {
     fn parse<E>(input: &'a str) -> IResult<&'a str, Self, E>
     where
-        E: ParseError<&'a str>,
+        E: ParserError<&'a str>,
     {
-        let (rest, (_, name, value, _)) = tuple((
+        let (rest, (_, name, value, _)) = (
             tag("["),
             parse_symbol,
-            opt(preceded(tag("="), is_not("]"))),
+            opt(preceded(tag("="), take_till1(']'))),
             tag("]"),
-        ))(input)?;
+        )
+            .parse_peek(input)?;
         Ok((rest, SelectorAttr { name, value }))
     }
 }

@@ -9,22 +9,24 @@
 // │                                                                           │
 // └───────────────────────────────────────────────────────────────────────────┘
 
-use nom::branch::alt;
-use nom::bytes::complete::is_not;
-use nom::character::complete::char;
-use nom::combinator::{map, recognize, verify};
-use nom::error::{ErrorKind, ParseError};
-use nom::multi::fold_many0;
-use nom::sequence::{delimited, preceded};
-use nom::IResult;
+use winnow::{
+    combinator::{alt, delimited, fold_repeat, not, preceded},
+    error::{ErrorKind, ParserError},
+    token::take_till1,
+    IResult, PResult, Parser,
+};
 
-fn parse_escaped_char(input: &str) -> IResult<&str, &str> {
-    recognize(preceded(char('\\'), is_not(" \r\t\n\"")))(input)
+fn parse_escaped_char<'a>(input: &mut &'a str) -> PResult<&'a str> {
+    preceded('\\', take_till1((' ', '\r', '\t', '\n', '\"')))
+        .recognize()
+        .parse_next(input)
 }
 
-fn parse_literal(input: &str) -> IResult<&str, &str> {
-    let not_quote_slash = is_not("\"\\");
-    verify(not_quote_slash, |s: &str| !s.is_empty())(input)
+fn parse_literal<'a>(input: &mut &'a str) -> PResult<&'a str> {
+    let not_quote_slash = take_till1(('\"', '\\'));
+    not_quote_slash
+        .verify(|s: &str| !s.is_empty())
+        .parse_next(input)
 }
 
 enum StringFragment {
@@ -41,19 +43,21 @@ impl StringFragment {
     }
 }
 
-fn parse_fragment(input: &str) -> IResult<&str, StringFragment> {
+fn parse_fragment<'a>(input: &mut &'a str) -> PResult<StringFragment> {
     alt((
-        map(parse_literal, |x| StringFragment::Literal(x.len())),
-        map(parse_escaped_char, |x| StringFragment::EscapedChar(x.len())),
-    ))(input)
+        parse_literal.map(|x| StringFragment::Literal(x.len())),
+        parse_escaped_char.map(|x| StringFragment::EscapedChar(x.len())),
+    ))
+    .parse_next(input)
 }
 
-pub fn parse_string_literal<'a, E: ParseError<&'a str>>(
-) -> impl Fn(&'a str) -> IResult<&'a str, &'a str, E> {
-    move |input| {
-        let build_string = fold_many0(parse_fragment, || 2, |len, frag| frag.len() + len);
-        let offset = delimited(char('"'), build_string, char('"'));
-        let res = map(offset, |x| &input[..x])(input);
-        res.map_err(|_| nom::Err::Error(E::from_error_kind(input, ErrorKind::AlphaNumeric)))
+pub fn parse_string_literal<'a, E: ParserError<&'a str>>() -> impl Parser<&'a str, &'a str, E> {
+    move |input: &mut &'a str| {
+        let build_string = fold_repeat(0.., parse_fragment, || 2, |len, frag| frag.len() + len);
+        let offset = delimited('"', build_string, '"');
+        let res = offset.map(|x| &input[..x]).parse_next(input);
+        res.map_err(|_| {
+            winnow::error::ErrMode::Backtrack(E::from_error_kind(&input, ErrorKind::Slice))
+        })
     }
 }

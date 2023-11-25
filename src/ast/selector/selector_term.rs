@@ -9,18 +9,15 @@
 // │                                                                           │
 // └───────────────────────────────────────────────────────────────────────────┘
 
-use nom::branch::alt;
-use nom::bytes::complete::tag;
-use nom::combinator::opt;
-use nom::error::ParseError;
-use nom::multi::many0;
-use nom::sequence::{delimited, preceded, tuple};
-use nom::{IResult, Parser};
+use winnow::{
+    combinator::{alt, delimited, opt, preceded, repeat},
+    error::ParserError,
+    token::tag,
+    unpeek, IResult, Parser,
+};
 
 use super::attribute::SelectorAttr;
-use crate::ast::token::*;
-use crate::parser::*;
-use crate::render::*;
+use crate::{ast::token::*, parser::*, render::*};
 
 /// pseudo-selectors can be "pseudo-class" or "pseudo-element", and we are only
 /// concerned about the distinction between them in regards to their syntax.
@@ -40,10 +37,11 @@ pub struct Pseudo<'a> {
 }
 
 impl<'a> ParseCss<'a> for Pseudo<'a> {
-    fn parse<E: ParseError<&'a str>>(input: &'a str) -> IResult<&'a str, Self, E> {
-        let (input, mode) = tuple((tag(":"), opt(tag(":"))))(input)?;
-        let (input, property) = parse_symbol(input)?;
-        let (input, value) = opt(delimited(tag("("), SelectorTerm::parse, tag(")")))(input)?;
+    fn parse<E: ParserError<&'a str>>(input: &'a str) -> IResult<&'a str, Self, E> {
+        let (input, mode) = (tag(":"), opt(tag(":"))).parse_peek(input)?;
+        let (input, property) = parse_symbol.parse_peek(input)?;
+        let (input, value) =
+            opt(delimited(tag("("), unpeek(SelectorTerm::parse), tag(")"))).parse_peek(input)?;
         let mode = mode
             .1
             .map(|_| PseudoMode::PseudoElement)
@@ -182,23 +180,26 @@ impl<'a, T: RenderCss> RenderCss for SelectorTerm<'a, T> {
 impl<'a> ParseCss<'a> for SelectorTerm<'a, Option<&'a str>> {
     fn parse<E>(input: &'a str) -> IResult<&'a str, Self, E>
     where
-        E: ParseError<&'a str>,
+        E: ParserError<&'a str>,
     {
-        let (rest, (tag, qualifiers)) = tuple((
+        let (rest, (tag, qualifiers)) = (
             opt(parse_symbol),
-            many0(alt((
-                preceded(tag("."), parse_symbol.map(SelType::Class)),
-                preceded(tag("#"), parse_symbol.map(SelType::Id)),
-                Pseudo::parse.map(SelType::Pseudo),
-                SelectorAttr::parse.map(SelType::Attr),
-            ))),
-        ))(input)?;
+            repeat::<_, _, Vec<_>, _, _>(
+                0..,
+                alt((
+                    preceded(tag("."), parse_symbol.map(SelType::Class)),
+                    preceded(tag("#"), parse_symbol.map(SelType::Id)),
+                    unpeek(Pseudo::parse).map(SelType::Pseudo),
+                    unpeek(SelectorAttr::parse).map(SelType::Attr),
+                )),
+            ),
+        )
+            .parse_peek(input)?;
 
         if tag.is_none() && qualifiers.is_empty() {
-            return nom::IResult::Err(nom::Err::Error(ParseError::from_error_kind(
-                rest,
-                nom::error::ErrorKind::Verify,
-            )));
+            return winnow::IResult::Err(winnow::error::ErrMode::Backtrack(
+                ParserError::from_error_kind(&rest, winnow::error::ErrorKind::Verify),
+            ));
         }
 
         Ok((rest, SelectorTerm::new(tag, &qualifiers)))
@@ -208,17 +209,21 @@ impl<'a> ParseCss<'a> for SelectorTerm<'a, Option<&'a str>> {
 impl<'a> ParseCss<'a> for SelectorTerm<'a, ()> {
     fn parse<E>(input: &'a str) -> IResult<&'a str, Self, E>
     where
-        E: ParseError<&'a str>,
+        E: ParserError<&'a str>,
     {
-        let (rest, (_, qualifiers)) = tuple((
+        let (rest, (_, qualifiers)) = (
             tag("&"),
-            many0(alt((
-                preceded(tag("."), parse_symbol.map(SelType::Class)),
-                preceded(tag("#"), parse_symbol.map(SelType::Id)),
-                Pseudo::parse.map(SelType::Pseudo),
-                SelectorAttr::parse.map(SelType::Attr),
-            ))),
-        ))(input)?;
+            repeat::<_, _, Vec<_>, _, _>(
+                0..,
+                alt((
+                    preceded(tag("."), parse_symbol.map(SelType::Class)),
+                    preceded(tag("#"), parse_symbol.map(SelType::Id)),
+                    unpeek(Pseudo::parse).map(SelType::Pseudo),
+                    unpeek(SelectorAttr::parse).map(SelType::Attr),
+                )),
+            ),
+        )
+            .parse_peek(input)?;
 
         Ok((rest, SelectorTerm::new((), &qualifiers)))
     }
@@ -337,7 +342,7 @@ mod tests {
     #[test]
     fn test_parameterized_pesudo_renders_correctly() {
         assert_matches!(
-            SelectorTerm::<Option<&str>>::parse::<nom::error::VerboseError<&str>>(
+            SelectorTerm::<Option<&str>>::parse::<winnow::error::VerboseError<&str>>(
                 "div:nth-child(2)"
             )
             .map(|x| x.as_css_string())
@@ -361,7 +366,7 @@ mod tests {
     #[test]
     fn test_pesudo_element_renders_correctly() {
         assert_matches!(
-            SelectorTerm::<Option<&str>>::parse::<nom::error::VerboseError<&str>>(
+            SelectorTerm::<Option<&str>>::parse::<winnow::error::VerboseError<&str>>(
                 "div::-webkit-scroll-thumb"
             )
             .map(|x| x.as_css_string())

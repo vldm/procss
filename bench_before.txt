@@ -1,0 +1,36 @@
+Gnuplot not found, using plotters backend
+main()                  time:   [853.93 µs 857.61 µs 862.29 µs]
+Found 9 outliers among 100 measurements (9.00%)
+  3 (3.00%) high mild
+  6 (6.00%) high severe
+
+main_fast()             time:   [342.73 µs 345.98 µs 349.78 µs]
+
+parse()                 time:   [721.06 µs 725.55 µs 731.47 µs]
+Found 3 outliers among 100 measurements (3.00%)
+  1 (1.00%) high mild
+  2 (2.00%) high severe
+
+parse_unchecked()       time:   [179.50 µs 180.38 µs 181.34 µs]
+Found 13 outliers among 100 measurements (13.00%)
+  1 (1.00%) high mild
+  12 (12.00%) high severe
+
+flatten()               time:   [102.49 µs 102.72 µs 102.95 µs]
+Found 10 outliers among 100 measurements (10.00%)
+  1 (1.00%) low severe
+  2 (2.00%) low mild
+  6 (6.00%) high mild
+  1 (1.00%) high severe
+
+as_css_string()         time:   [38.794 µs 38.980 µs 39.187 µs]
+Found 11 outliers among 100 measurements (11.00%)
+  5 (5.00%) high mild
+  6 (6.00%) high severe
+
+inline_url()            time:   [4.1423 µs 4.1676 µs 4.1968 µs]
+Found 15 outliers among 100 measurements (15.00%)
+  2 (2.00%) low mild
+  5 (5.00%) high mild
+  8 (8.00%) high severe
+

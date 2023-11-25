@@ -92,10 +92,11 @@ pub mod utils;
 #[cfg(not(feature = "iotest"))]
 pub mod utils;
 
-use self::ast::Tree;
-pub use self::builder::BuildCss;
-use self::parser::{unwrap_parse_error, ParseCss};
-pub use self::render::RenderCss;
+use self::{
+    ast::Tree,
+    parser::{unwrap_parse_error, ParseCss},
+};
+pub use self::{builder::BuildCss, render::RenderCss};
 
 /// Parse CSS text to a [`Tree`] (where it can be further manipulated),
 /// capturing detailed error reporting for a moderate performance impact (using
@@ -120,7 +121,7 @@ pub fn parse(input: &str) -> anyhow::Result<Tree<'_>> {
 /// let ast = procss::parse_unchecked("div { .open { color: red; }}").unwrap();
 /// ```
 pub fn parse_unchecked(input: &str) -> anyhow::Result<Tree<'_>> {
-    let (_, tree) = Tree::parse::<()>(input)?;
+    let (_, tree) = Tree::parse::<()>(input).map_err(|e| anyhow::anyhow!("{e}"))?;
     Ok(tree)
 }
 

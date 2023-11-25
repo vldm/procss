@@ -9,15 +9,14 @@
 // │                                                                           │
 // └───────────────────────────────────────────────────────────────────────────┘
 
-use nom::branch::alt;
-use nom::bytes::complete::tag;
-use nom::error::ParseError;
-use nom::sequence::delimited;
-use nom::{IResult, Parser};
+use winnow::{
+    combinator::{alt, delimited},
+    error::ParserError,
+    token::tag,
+    IResult, Parser,
+};
 
-use crate::ast::token::*;
-use crate::parser::*;
-use crate::render::*;
+use crate::{ast::token::*, parser::*, render::*};
 
 /// A selector combinator, used to combine a list of selectors.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
@@ -42,7 +41,7 @@ impl RenderCss for Combinator {
 impl<'a> ParseCss<'a> for Combinator {
     fn parse<E>(input: &'a str) -> IResult<&'a str, Self, E>
     where
-        E: ParseError<&'a str>,
+        E: ParserError<&'a str>,
     {
         delimited(
             comment0,
@@ -53,6 +52,7 @@ impl<'a> ParseCss<'a> for Combinator {
                 comment0.map(|_| Combinator::Null),
             )),
             comment0,
-        )(input)
+        )
+        .parse_peek(input)
     }
 }

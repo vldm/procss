@@ -11,17 +11,18 @@
 
 use std::borrow::Cow;
 
-use nom::branch::alt;
-use nom::bytes::complete::{is_not, tag};
-use nom::combinator::recognize;
-use nom::error::ParseError;
-use nom::multi::many0;
-use nom::sequence::tuple;
-use nom::IResult;
+use winnow::{
+    combinator::{alt, not, repeat},
+    error::ParserError,
+    token::{tag, take_till1},
+    IResult, Parser,
+};
 
-use crate::ast::token::{comment0, parse_string_literal, parse_symbol, trim_whitespace};
-use crate::render::RenderCss;
-use crate::transform::TransformCss;
+use crate::{
+    ast::token::{comment0, parse_string_literal, parse_symbol, trim_whitespace},
+    render::RenderCss,
+    transform::TransformCss,
+};
 
 /// A CSS rule, of the form `xxx: yyy` (delimited by `;` in a ruleset).
 #[derive(Clone, Debug)]
@@ -48,11 +49,15 @@ impl<'a> RenderCss for Rule<'a> {
 // TODO property is not the same parser as tag.
 // TODO this Cow is not borrowed ...
 impl<'a> crate::parser::ParseCss<'a> for Rule<'a> {
-    fn parse<E: ParseError<&'a str>>(input: &'a str) -> IResult<&'a str, Self, E> {
-        let (input, property) = parse_symbol(input)?;
-        let (input, _) = tuple((comment0, tag(":"), comment0))(input)?;
-        let (input, value) =
-            recognize(many0(alt((is_not("\";}"), parse_string_literal()))))(input)?;
+    fn parse<E: ParserError<&'a str>>(input: &'a str) -> IResult<&'a str, Self, E> {
+        let (input, property) = parse_symbol.parse_peek(input)?;
+        let (input, _) = Parser::parse_peek(&mut (comment0, tag(":"), comment0), input)?;
+        let (input, value) = repeat::<_, _, Vec<_>, _, _>(
+            0..,
+            alt((take_till1(('\"', ';', '}')), parse_string_literal())),
+        )
+        .recognize()
+        .parse_peek(input)?;
         Ok((input, Rule {
             property: property.into(),
             value: value.into(),

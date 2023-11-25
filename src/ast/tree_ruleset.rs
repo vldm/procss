@@ -9,21 +9,20 @@
 // │                                                                           │
 // └───────────────────────────────────────────────────────────────────────────┘
 
-use nom::branch::alt;
-use nom::bytes::complete::tag;
-use nom::combinator::peek;
-use nom::error::ParseError;
-use nom::multi::{many0, many1};
-use nom::sequence::{terminated, tuple};
-use nom::{IResult, Parser};
+use winnow::{
+    combinator::{alt, peek, repeat, terminated},
+    error::ParserError,
+    token::tag,
+    unpeek, IResult, Parser,
+};
 
-use super::flat_ruleset::FlatRuleset;
-use super::ruleset::{QualNestedRuleset, QualRule, QualRuleset, Rule, Ruleset, SelectorRuleset};
-use super::selector::Selector;
-use super::token::{comment0, sep0};
-use crate::parser::*;
-use crate::render::*;
-use crate::transform::TransformCss;
+use super::{
+    flat_ruleset::FlatRuleset,
+    ruleset::{QualNestedRuleset, QualRule, QualRuleset, Rule, Ruleset, SelectorRuleset},
+    selector::Selector,
+    token::{comment0, sep0},
+};
+use crate::{parser::*, render::*, transform::TransformCss};
 
 /// A tree node which expresses a recursive `T` over `Ruleset<T>`.  Using this
 /// struct in place of `Rule` allows nested CSS selectors that can be later
@@ -35,10 +34,10 @@ pub enum TreeRule<'a> {
 }
 
 impl<'a> ParseCss<'a> for TreeRule<'a> {
-    fn parse<E: ParseError<&'a str>>(input: &'a str) -> IResult<&'a str, Self, E> {
-        let block = terminated(TreeRuleset::parse, sep0).map(TreeRule::Ruleset);
-        let rule = terminated(Rule::parse, sep0).map(TreeRule::Rule);
-        alt((block, rule))(input)
+    fn parse<E: ParserError<&'a str>>(input: &'a str) -> IResult<&'a str, Self, E> {
+        let block = terminated(unpeek(TreeRuleset::parse), sep0).map(TreeRule::Ruleset);
+        let rule = terminated(unpeek(Rule::parse), sep0).map(TreeRule::Rule);
+        alt((block, rule)).parse_peek(input)
     }
 }
 
@@ -95,15 +94,15 @@ impl<'a> TransformCss<Vec<TreeRuleset<'a>>> for TreeRule<'a> {
 pub type TreeRuleset<'a> = Ruleset<'a, TreeRule<'a>>;
 
 impl<'a> ParseCss<'a> for TreeRuleset<'a> {
-    fn parse<E: ParseError<&'a str>>(input: &'a str) -> IResult<&'a str, Self, E> {
-        if let Ok((input, _)) = peek::<_, _, E, _>(tag("@"))(input) {
+    fn parse<E: ParserError<&'a str>>(input: &'a str) -> IResult<&'a str, Self, E> {
+        if let Ok((input, _)) = peek::<_, _, E, _>("@").parse_peek(input) {
             let (input, qual_rule) = QualRule::parse(input)?;
-            if let Ok((input, _)) = tag::<_, _, E>(";")(input) {
+            if let Ok((input, _)) = tag::<_, _, E>(";").parse_peek(input) {
                 Ok((input, Ruleset::QualRule(qual_rule)))
             } else {
-                let (input, _) = tuple((tag("{"), sep0))(input)?;
-                let (input, rules) = many1(TreeRule::parse::<E>)(input)?;
-                let (input, _) = tuple((comment0, tag("}")))(input)?;
+                let (input, _) = (tag("{"), sep0).parse_peek(input)?;
+                let (input, rules) = repeat(1.., unpeek(TreeRule::parse::<E>)).parse_peek(input)?;
+                let (input, _) = (comment0, tag("}")).parse_peek(input)?;
                 Ok((input, Ruleset::QualRuleset(QualRuleset(qual_rule, rules))))
             }
         } else {
@@ -178,11 +177,11 @@ impl<'a> TreeRuleset<'a> {
 type TreeSelectorRuleset<'a> = SelectorRuleset<'a, TreeRule<'a>>;
 
 impl<'a> ParseCss<'a> for TreeSelectorRuleset<'a> {
-    fn parse<E: ParseError<&'a str>>(input: &'a str) -> IResult<&'a str, Self, E> {
+    fn parse<E: ParserError<&'a str>>(input: &'a str) -> IResult<&'a str, Self, E> {
         let (input, selector) = Selector::parse(input)?;
-        let (input, _) = tuple((comment0, tag("{"), sep0))(input)?;
-        let (input, rules) = many0(TreeRule::parse)(input)?;
-        let (input, _) = tuple((comment0, tag("}")))(input)?;
+        let (input, _) = (comment0, tag("{"), sep0).parse_peek(input)?;
+        let (input, rules) = repeat(0.., unpeek(TreeRule::parse)).parse_peek(input)?;
+        let (input, _) = (comment0, tag("}")).parse_peek(input)?;
         Ok((input, SelectorRuleset(selector, rules)))
     }
 }
