@@ -1,0 +1,43 @@
+Gnuplot not found, using plotters backend
+main()                  time:   [693.65 µs 694.98 µs 696.40 µs]
+                        change: [-3.4115% -3.0850% -2.7782%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 4 outliers among 100 measurements (4.00%)
+  4 (4.00%) high mild
+
+main_fast()             time:   [295.29 µs 295.99 µs 296.80 µs]
+                        change: [-13.638% -13.411% -13.181%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 7 outliers among 100 measurements (7.00%)
+  6 (6.00%) high mild
+  1 (1.00%) high severe
+
+parse()                 time:   [558.86 µs 561.49 µs 564.31 µs]
+                        change: [-2.5125% -1.9859% -1.5061%] (p = 0.00 < 0.05)
+                        Performance has improved.
+
+parse_unchecked()       time:   [145.59 µs 146.63 µs 147.75 µs]
+                        change: [-14.839% -14.233% -13.626%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 5 outliers among 100 measurements (5.00%)
+  5 (5.00%) high mild
+
+flatten()               time:   [105.58 µs 106.04 µs 106.57 µs]
+                        change: [-12.462% -11.606% -10.851%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 4 outliers among 100 measurements (4.00%)
+  4 (4.00%) high mild
+
+as_css_string()         time:   [36.159 µs 36.291 µs 36.433 µs]
+                        change: [-3.1224% -1.7081% -0.5317%] (p = 0.01 < 0.05)
+                        Change within noise threshold.
+Found 10 outliers among 100 measurements (10.00%)
+  3 (3.00%) high mild
+  7 (7.00%) high severe
+
+inline_url()            time:   [2.2773 µs 2.2958 µs 2.3191 µs]
+                        change: [+6.4668% +7.3719% +8.4236%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 22 outliers among 100 measurements (22.00%)
+  3 (3.00%) high mild
+  19 (19.00%) high severe

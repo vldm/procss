@@ -9,18 +9,23 @@
 // │                                                                           │
 // └───────────────────────────────────────────────────────────────────────────┘
 
-use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
 use anyhow::Context;
 
-use crate::parser::{unwrap_parse_error, ParseCss};
-use crate::render::RenderCss;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::utils::fs;
 #[cfg(feature = "iotest")]
 use crate::utils::IoTestFs;
-use crate::{ast, transformers, utils};
+use crate::{
+    ast,
+    parser::{unwrap_parse_error, ParseCss},
+    render::RenderCss,
+    transformers, utils,
+};
 
 /// A CSS+ project build, comprising a collection of CSS+ files which may
 /// reference eachother (via `@import`).
@@ -144,9 +149,7 @@ impl<'a> CompiledCss<'a> {
 
 #[cfg(all(test, feature = "iotest"))]
 mod tests {
-    use std::cell::RefCell;
-    use std::path::*;
-    use std::rc::Rc;
+    use std::{cell::RefCell, path::*, rc::Rc};
 
     use super::*;
 
@@ -177,7 +180,8 @@ mod tests {
 
         let mut build = BuildCss::new("./src".to_owned());
         build.add_file("app/component.scss");
-        build.compile().unwrap().write("./dist").unwrap();
+        let css = build.compile().unwrap();
+        css.write("./dist").unwrap();
 
         let outputs = outputs.borrow().clone();
         assert_eq!(outputs, vec!["div .open{color:green;}".to_owned()]);

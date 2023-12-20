@@ -9,6 +9,9 @@
 // │                                                                           │
 // └───────────────────────────────────────────────────────────────────────────┘
 
+use smallvec::SmallVec;
+use winnow::stream::Accumulate;
+
 use crate::render::RenderCss;
 
 /// A wrapper around [`Vec`] which guarantees at least `N` elements.

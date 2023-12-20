@@ -14,10 +14,11 @@ mod combinator;
 mod selector_path;
 mod selector_term;
 
-use std::ops::Deref;
+use std::{hash::Hash, ops::Deref};
 
+use smallvec::SmallVec;
 use winnow::{
-    combinator::{delimited, preceded, repeat},
+    combinator::{delimited, preceded, repeat, separated},
     error::ParserError,
     token::tag,
     unpeek, IResult, Parser,
